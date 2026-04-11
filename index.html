@@ -189,6 +189,45 @@ canvas{max-width:100%;max-height:240px}
 .sync-dot.syncing{background:var(--yellow);animation:pulse .8s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
+
+/* ANNUAL VIEW */
+.year-selector{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+.year-btn{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 14px;font-size:.85rem;font-weight:600;color:var(--text2);cursor:pointer;transition:var(--tr)}
+.year-btn:hover{background:var(--surface3);color:var(--text)}
+.year-display{font-size:1.1rem;font-weight:700;color:var(--text);min-width:60px;text-align:center}
+.annual-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:24px}
+@media(max-width:900px){.annual-grid{grid-template-columns:1fr}}
+.month-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:var(--tr)}
+.month-card:hover{border-color:var(--border2);box-shadow:var(--shadow-sm)}
+.month-card-header{padding:12px 16px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.month-card-title{font-size:.92rem;font-weight:700;color:var(--text)}
+.month-card-saldo{font-family:var(--mono);font-size:.85rem;font-weight:700}
+.month-card-body{padding:12px 16px}
+.month-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(42,48,80,.3)}
+.month-row:last-child{border-bottom:none}
+.month-row-label{font-size:.75rem;color:var(--text3);display:flex;align-items:center;gap:6px}
+.month-row-right{display:flex;align-items:center;gap:10px}
+.month-row-val{font-family:var(--mono);font-size:.78rem;font-weight:500}
+.var-badge{font-size:.65rem;font-weight:600;padding:1px 6px;border-radius:99px;white-space:nowrap}
+.var-up{background:rgba(240,98,146,.12);color:var(--red)}
+.var-down{background:rgba(61,214,140,.12);color:var(--green)}
+.var-neu{background:rgba(74,85,128,.2);color:var(--text3)}
+.var-up-good{background:rgba(61,214,140,.12);color:var(--green)}
+.acum-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:20px;overflow:hidden}
+.acum-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0}
+@media(max-width:700px){.acum-grid{grid-template-columns:repeat(2,1fr)}}
+.acum-cell{padding:16px;border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+.acum-cell:nth-child(4n){border-right:none}
+.acum-label{font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:6px}
+.acum-val{font-family:var(--mono);font-size:1rem;font-weight:700}
+.comp-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:20px;overflow:hidden}
+.comp-table{width:100%;border-collapse:collapse;font-size:.8rem}
+.comp-table th{padding:10px 14px;text-align:left;font-size:.65rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap}
+.comp-table td{padding:9px 14px;border-bottom:1px solid rgba(42,48,80,.4);vertical-align:middle}
+.comp-table tr:last-child td{border-bottom:none}
+.comp-table tr:hover td{background:var(--surface2)}
+.empty-month{opacity:.4}
+
 @media(max-width:900px){.sidebar{display:none}.main{padding:20px 16px}.kpi-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:600px){.kpi-grid{grid-template-columns:1fr}.qa-row{grid-template-columns:1fr 1fr}}
 </style>
@@ -210,7 +249,7 @@ canvas{max-width:100%;max-height:240px}
     <div class="nav-item" data-page="investimentos" onclick="go(&#39;investimentos&#39;)"><span class="nav-icon">📈</span>Investimentos</div>
     <div class="nav-item" data-page="categorias" onclick="go(&#39;categorias&#39;)"><span class="nav-icon">🗂️</span>Categorias</div>
     <div class="nav-item" data-page="cartoes" onclick="go(&#39;cartoes&#39;)"><span class="nav-icon">🃏</span>Meus Cartões</div>
-    <div class="nav-item" data-page="historico" onclick="go(&#39;historico&#39;)"><span class="nav-icon">🕐</span>Histórico</div>
+    <div class="nav-item" data-page="historico" onclick="go(&#39;historico&#39;)"><span class="nav-icon">📅</span>Visão Anual</div>
   </div>
   <div class="sidebar-footer">
       <div id="user-bar" class="user-bar" style="display:none">
@@ -1099,22 +1138,193 @@ ${cards.map((card,i)=>{
 }
 
 // ═══════════════════ HISTÓRICO ══════════════════════
+// ── ANNUAL STATE ─────────────────────────────────────
+let annualYear = new Date().getFullYear();
+
 function pHist(){
-  const months=Object.keys(S.data).sort().reverse();
+  const yr = annualYear;
+  const MONTHS_EN = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+  const MONTHS_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const keys = MONTHS_EN.map(m=>`${yr}-${m}`);
+
+  // Calc all months
+  const mdata = keys.map((k,i)=>({
+    key:k, name:MONTHS_PT[i], short:MONTHS_PT[i].slice(0,3),
+    t:totals(k), mt:macroTots(k)
+  }));
+
+  // Current year accumulated (up to today)
+  const today = new Date();
+  const curMonth = today.getMonth(); // 0-based
+  const isCurrentYear = yr === today.getFullYear();
+  const acumUntil = isCurrentYear ? curMonth : 11;
+  let acumE=0,acumS=0,acumI=0,acumSaldo=0;
+  mdata.slice(0,acumUntil+1).forEach(md=>{
+    acumE+=md.t.tE; acumS+=md.t.tS; acumI+=md.t.tI; acumSaldo+=md.t.saldo;
+  });
+
+  // Macro accumulated
+  const macros = getMacros();
+  const acumMacros = macros.map(mac=>{
+    let total=0;
+    mdata.slice(0,acumUntil+1).forEach(md=>{
+      const item=md.mt.find(x=>x.macro.id===mac.id);
+      if(item)total+=item.real;
+    });
+    return{nome:mac.nome,emoji:mac.emoji,cor:mac.cor,total};
+  });
+
+  function varBadge(cur,prev,invertGood=false){
+    if(!prev||prev===0)return'';
+    const pct=((cur-prev)/Math.abs(prev))*100;
+    if(Math.abs(pct)<0.5)return`<span class="var-badge var-neu">= 0%</span>`;
+    const up=pct>0;
+    const good=invertGood?!up:up;
+    const arrow=up?'▲':'▼';
+    const cls=good?'var-up-good':'var-up';
+    const cls2=good?'var-down':'var-up';
+    return`<span class="var-badge ${up?cls2:cls}">${arrow} ${Math.abs(pct).toFixed(1)}%</span>`;
+  }
+
+  function monthCard(md, prev){
+    const hasData = md.t.tE>0||md.t.tS>0||md.t.tI>0;
+    const saldoColor = md.t.saldo>=0?'var(--green)':'var(--red)';
+    const rows = [
+      {label:'💵 Entradas', val:md.t.tE, prev:prev?.t.tE, color:'var(--green)', good:true},
+      {label:'💸 Saídas',   val:md.t.tS, prev:prev?.t.tS, color:'var(--red)',   good:false},
+      {label:'📈 Invest.',  val:md.t.tI, prev:prev?.t.tI, color:'var(--teal)',  good:true},
+    ];
+    // macro rows
+    const macroRows = md.mt.map(item=>({
+      label:`${item.macro.emoji} ${item.macro.nome}`,
+      val:item.real,
+      prev:prev?.mt.find(x=>x.macro.id===item.macro.id)?.real,
+      color:item.macro.cor,
+      good:false
+    }));
+
+    return`<div class="month-card ${!hasData?'empty-month':''}">
+      <div class="month-card-header">
+        <div class="month-card-title">${md.name} ${yr}</div>
+        <div class="month-card-saldo" style="color:${saldoColor}">${hasData?fmt(md.t.saldo):'—'}</div>
+      </div>
+      <div class="month-card-body">
+        ${[...rows,...macroRows].map(row=>`
+        <div class="month-row">
+          <span class="month-row-label">${row.label}</span>
+          <div class="month-row-right">
+            <span class="month-row-val" style="color:${row.color}">${row.val>0?fmt(row.val):'—'}</span>
+            ${prev?varBadge(row.val,row.prev,!row.good):''}
+          </div>
+        </div>`).join('')}
+        <div style="margin-top:8px;display:flex;justify-content:flex-end">
+          <button class="btn btn-g btn-sm" onclick="goM('${md.key}')">Abrir →</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // Comparison table data
+  const compRows = [
+    {label:'💵 Entradas', get:t=>t.tE, good:true},
+    {label:'💸 Saídas',   get:t=>t.tS, good:false},
+    {label:'💰 Saldo',    get:t=>t.saldo, good:true},
+    {label:'📈 Invest.',  get:t=>t.tI, good:true},
+    ...macros.map(mac=>({
+      label:`${mac.emoji} ${mac.nome}`,
+      get:(t,mt)=>mt?.find(x=>x.macro.id===mac.id)?.real||0,
+      good:false
+    }))
+  ];
+
+  const activePairs = [];
+  for(let i=1;i<mdata.length;i++){
+    const cur=mdata[i], prv=mdata[i-1];
+    const hasAny=cur.t.tE>0||cur.t.tS>0||prv.t.tE>0||prv.t.tS>0;
+    if(hasAny) activePairs.push({cur,prv});
+  }
+
   return`
-<div class="page-header"><div class="page-title">🕐 Histórico</div><div class="page-sub">Todos os meses</div></div>
-${months.length?`<div class="section"><div class="tw"><table>
-  <thead><tr><th>Mês</th><th style="text-align:right">Entradas</th><th style="text-align:right">Saídas</th><th style="text-align:right">Investimentos</th><th style="text-align:right">Saldo</th><th></th></tr></thead>
-  <tbody>${months.map(m=>{const t=totals(m);return`<tr>
-    <td class="nm">${mname(m)}</td>
-    <td class="am cr">${fmt(t.tE)}</td>
-    <td class="am" style="color:var(--red)">${fmt(t.tS)}</td>
-    <td class="am" style="color:var(--teal)">${fmt(t.tI)}</td>
-    <td class="am ${t.saldo>=0?'cr':''}" style="${t.saldo<0?'color:var(--red)':''}">${fmt(t.saldo)}</td>
-    <td><button class="btn btn-g btn-sm" onclick="goM('${m}')">Ver →</button></td>
-  </tr>`;}).join('')}</tbody>
-</table></div></div>`
-:'<div class="empty" style="padding:60px"><div class="empty-icon">🕐</div><div class="empty-text">Nenhum histórico ainda.</div></div>'}`;
+<div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+  <div><div class="page-title">📅 Visão Anual</div><div class="page-sub">Todos os meses de ${yr} — atualiza automaticamente</div></div>
+  <div class="year-selector">
+    <button class="year-btn" onclick="annualYear--;go('historico')">◀</button>
+    <span class="year-display">${yr}</span>
+    <button class="year-btn" onclick="annualYear++;go('historico')">▶</button>
+  </div>
+</div>
+
+<!-- ACUMULADO -->
+<div class="acum-section">
+  <div class="section-header">
+    <div class="section-title">📊 Acumulado ${isCurrentYear?MONTHS_PT[acumUntil]:MONTHS_PT[11]} ${yr}</div>
+  </div>
+  <div class="acum-grid">
+    <div class="acum-cell">
+      <div class="acum-label">💵 Entradas</div>
+      <div class="acum-val" style="color:var(--green)">${fmt(acumE)}</div>
+    </div>
+    <div class="acum-cell">
+      <div class="acum-label">💸 Saídas</div>
+      <div class="acum-val" style="color:var(--red)">${fmt(acumS)}</div>
+    </div>
+    <div class="acum-cell">
+      <div class="acum-label">📈 Investimentos</div>
+      <div class="acum-val" style="color:var(--teal)">${fmt(acumI)}</div>
+    </div>
+    <div class="acum-cell" style="border-right:none">
+      <div class="acum-label">💰 Saldo</div>
+      <div class="acum-val" style="color:${acumSaldo>=0?'var(--green)':'var(--red)'}">${fmt(acumSaldo)}</div>
+    </div>
+    ${acumMacros.map((mac,i)=>`<div class="acum-cell" style="${i===acumMacros.length-1?'border-right:none':''}">
+      <div class="acum-label">${mac.emoji} ${mac.nome}</div>
+      <div class="acum-val" style="color:${mac.cor}">${fmt(mac.total)}</div>
+    </div>`).join('')}
+  </div>
+</div>
+
+<!-- COMPARAÇÕES MÊS A MÊS -->
+${activePairs.length?`<div class="comp-section">
+  <div class="section-header">
+    <div class="section-title">🔄 Comparativo Mês a Mês</div>
+  </div>
+  <div style="overflow-x:auto">
+  <table class="comp-table">
+    <thead><tr>
+      <th>Indicador</th>
+      ${activePairs.map(p=>`<th>${p.prv.short} → ${p.cur.short}</th>`).join('')}
+    </tr></thead>
+    <tbody>
+    ${compRows.map(row=>`<tr>
+      <td style="color:var(--text2);font-weight:500">${row.label}</td>
+      ${activePairs.map(p=>{
+        const cv=row.get(p.cur.t,p.cur.mt);
+        const pv=row.get(p.prv.t,p.prv.mt);
+        if(cv===0&&pv===0)return`<td style="color:var(--text3);text-align:right">—</td>`;
+        const pct=pv!==0?((cv-pv)/Math.abs(pv))*100:null;
+        const up=pct>0;
+        const good=row.good?up:!up;
+        const color=good?'var(--green)':'var(--red)';
+        const arrow=up?'▲':'▼';
+        return`<td style="text-align:right">
+          <div style="font-family:var(--mono);font-size:.78rem;color:var(--text)">${fmt(cv)}</div>
+          ${pct!==null?`<div style="font-size:.68rem;color:${color};margin-top:1px">${arrow} ${Math.abs(pct).toFixed(1)}%</div>`:''}
+        </td>`;
+      }).join('')}
+    </tr>`).join('')}
+    </tbody>
+  </table>
+  </div>
+</div>`:''}
+
+<!-- TODOS OS MESES -->
+<div class="section-header" style="padding:0 0 12px">
+  <div class="section-title" style="font-size:1rem">🗓️ Todos os Meses</div>
+  <span style="font-size:.75rem;color:var(--text3)">Clique em "Abrir →" para ir ao mês</span>
+</div>
+<div class="annual-grid">
+  ${mdata.map((md,i)=>monthCard(md, i>0?mdata[i-1]:null)).join('')}
+</div>`;
 }
 function goM(m){S.month=m;go('dashboard');}
 
