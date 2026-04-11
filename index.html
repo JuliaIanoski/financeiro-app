@@ -190,6 +190,54 @@ canvas{max-width:100%;max-height:240px}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
 
+
+
+/* CALCULADORAS */
+.calc-tabs{display:flex;gap:2px;background:var(--surface2);border-radius:var(--radius-sm);padding:3px;margin-bottom:24px}
+.calc-tab{flex:1;text-align:center;padding:8px 12px;border-radius:7px;font-size:.8rem;font-weight:600;color:var(--text3);cursor:pointer;transition:var(--tr)}
+.calc-tab.active{background:var(--surface);color:var(--text);box-shadow:var(--shadow-sm)}
+.calc-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px}
+.calc-title{font-size:1rem;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.calc-sub{font-size:.78rem;color:var(--text3);margin-bottom:20px;line-height:1.5}
+.calc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+.calc-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+@media(max-width:700px){.calc-grid{grid-template-columns:1fr 1fr}.calc-grid-2{grid-template-columns:1fr}}
+.calc-field{display:flex;flex-direction:column;gap:5px}
+.calc-result{background:linear-gradient(135deg,rgba(91,141,238,.08),rgba(61,214,140,.06));border:1px solid rgba(91,141,238,.2);border-radius:var(--radius-sm);padding:20px 24px;margin-top:4px}
+.calc-result-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px}
+.calc-result-item{display:flex;flex-direction:column;gap:4px}
+.calc-result-label{font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3)}
+.calc-result-val{font-family:var(--mono);font-size:1.1rem;font-weight:700}
+.calc-result-sub{font-size:.72rem;color:var(--text3)}
+.calc-btn{display:inline-flex;align-items:center;gap:6px;padding:10px 24px;border-radius:var(--radius-sm);font-size:.85rem;font-weight:600;background:var(--blue);color:#fff;cursor:pointer;border:none;transition:var(--tr);width:100%;justify-content:center;margin-top:4px}
+.calc-btn:hover{background:#4a7de0;box-shadow:0 0 20px rgba(91,141,238,.3)}
+.calc-divider{height:1px;background:var(--border);margin:20px 0}
+.calc-badge-green{background:rgba(61,214,140,.12);color:var(--green);border:1px solid rgba(61,214,140,.2);padding:3px 10px;border-radius:99px;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:4px}
+.calc-badge-red{background:rgba(240,98,146,.12);color:var(--red);border:1px solid rgba(240,98,146,.2);padding:3px 10px;border-radius:99px;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:4px}
+.calc-badge-yellow{background:rgba(255,209,102,.12);color:var(--yellow);border:1px solid rgba(255,209,102,.2);padding:3px 10px;border-radius:99px;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:4px}
+.milhas-result{background:var(--surface2);border-radius:var(--radius-sm);padding:16px;margin-top:12px}
+
+/* METAS */
+.metas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:24px}
+.meta-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:var(--tr);position:relative}
+.meta-card:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:var(--shadow)}
+.meta-card-top{height:4px}
+.meta-card-body{padding:18px 20px}
+.meta-title{font-size:.95rem;font-weight:700;color:var(--text);margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.meta-obs{font-size:.75rem;color:var(--text3);margin-bottom:12px;line-height:1.5;font-style:italic}
+.meta-values{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:8px}
+.meta-atual{font-family:var(--mono);font-size:1.1rem;font-weight:700;color:var(--text)}
+.meta-total{font-family:var(--mono);font-size:.78rem;color:var(--text3)}
+.meta-pct{font-family:var(--mono);font-size:.78rem;font-weight:600}
+.meta-bar{height:8px;background:var(--surface3);border-radius:99px;overflow:hidden;margin-bottom:12px}
+.meta-bar-fill{height:100%;border-radius:99px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+.meta-footer{display:flex;align-items:center;justify-content:space-between;font-size:.72rem;color:var(--text3)}
+.meta-actions{display:flex;gap:6px}
+.meta-prazo{display:flex;align-items:center;gap:4px}
+.meta-concluida{opacity:.6}
+.meta-concluida .meta-card-body{background:rgba(61,214,140,.03)}
+.badge-concluida{background:rgba(61,214,140,.15);color:var(--green);border:1px solid rgba(61,214,140,.25);padding:2px 8px;border-radius:99px;font-size:.65rem;font-weight:600}
+
 /* ANNUAL VIEW */
 .year-selector{display:flex;align-items:center;gap:12px;margin-bottom:24px}
 .year-btn{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 14px;font-size:.85rem;font-weight:600;color:var(--text2);cursor:pointer;transition:var(--tr)}
@@ -249,7 +297,9 @@ canvas{max-width:100%;max-height:240px}
     <div class="nav-item" data-page="investimentos" onclick="go(&#39;investimentos&#39;)"><span class="nav-icon">📈</span>Investimentos</div>
     <div class="nav-item" data-page="categorias" onclick="go(&#39;categorias&#39;)"><span class="nav-icon">🗂️</span>Categorias</div>
     <div class="nav-item" data-page="cartoes" onclick="go(&#39;cartoes&#39;)"><span class="nav-icon">🃏</span>Meus Cartões</div>
-    <div class="nav-item" data-page="historico" onclick="go(&#39;historico&#39;)"><span class="nav-icon">📅</span>Visão Anual</div>
+    <div class="nav-item" data-page="historico" onclick="go('historico')"><span class="nav-icon">📅</span>Visão Anual</div>
+    <div class="nav-item" data-page="metas" onclick="go('metas')"><span class="nav-icon">🎯</span>Metas</div>
+    <div class="nav-item" data-page="calculadoras" onclick="go('calculadoras')"><span class="nav-icon">🧮</span>Calculadoras</div>
   </div>
   <div class="sidebar-footer">
       <div id="user-bar" class="user-bar" style="display:none">
@@ -522,7 +572,7 @@ const TC={'Débito':'b-blue','PIX':'b-green','Dinheiro':'b-yellow'};
 let S={
   page:'dashboard',month:new Date().toISOString().slice(0,7),
   data:{},cats:[...DC],cards:[...DCARD.map(c=>({...c}))],
-  macros:[...DMACRO.map(m=>({...m,cats:[...m.cats]}))]
+  macros:[...DMACRO.map(m=>({...m,cats:[...m.cats]}))],metas:[]
 };
 
 const getCats=()=>S.cats&&S.cats.length?S.cats:DC;
@@ -539,7 +589,7 @@ function save(){
   saveTimeout=setTimeout(cloudSave, 800);
 }
 function load(){
-  try{const d=localStorage.getItem('fin_v3');if(d){const p=JSON.parse(d);S.month=p.month||S.month;S.data=p.data||{};S.cats=p.cats||[...DC];S.cards=p.cards||[...DCARD];S.macros=p.macros||[...DMACRO];}}catch(e){}
+  try{const d=localStorage.getItem('fin_v3');if(d){const p=JSON.parse(d);S.month=p.month||S.month;S.data=p.data||{};S.cats=p.cats||[...DC];S.cards=p.cards||[...DCARD];S.macros=p.macros||[...DMACRO];S.metas=p.metas||[];}}catch(e){}
 }
 const uid=()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
 
@@ -609,6 +659,7 @@ function startSync(){
         S.cats   = remote.cats   || S.cats;
         S.cards  = remote.cards  || S.cards;
         S.macros = remote.macros || S.macros;
+        S.metas  = remote.metas  || S.metas;
         S._ts    = remote._ts;
         save(); // also update localStorage
         render();
@@ -629,6 +680,7 @@ function cloudSave(){
     cats:   S.cats,
     cards:  S.cards,
     macros: S.macros,
+    metas:  S.metas||[],
     _ts:    S._ts
   }).then(()=>setSyncStatus('ok')).catch(e=>{ setSyncStatus('err'); console.error(e); });
 }
@@ -743,7 +795,7 @@ function drawPie(id){
 // ═══════════════════ RENDER ══════════════════════════
 function rpage(){
   const mc=document.getElementById('mc');
-  const pages={dashboard:pDash,gastos:pGastos,fixos:pFixos,cartao:pCartao,entradas:pEntradas,investimentos:pInv,categorias:pCats,cartoes:pCartoes,historico:pHist};
+  const pages={dashboard:pDash,gastos:pGastos,fixos:pFixos,cartao:pCartao,entradas:pEntradas,investimentos:pInv,categorias:pCats,cartoes:pCartoes,historico:pHist,metas:pMetas,calculadoras:pCalc};
   mc.innerHTML=(pages[S.page]||pDash)();
   if(S.page==='dashboard')drawPie('chart-pie');
   setTimeout(applyBRLMasks,50);
@@ -1326,6 +1378,802 @@ ${activePairs.length?`<div class="comp-section">
   ${mdata.map((md,i)=>monthCard(md, i>0?mdata[i-1]:null)).join('')}
 </div>`;
 }
+
+
+// ═══════════════════ CALCULADORAS ══════════════════
+let calcTab = 'rendafixa';
+
+function pCalc(){
+  return`
+<div class="page-header">
+  <div class="page-title">🧮 Calculadoras</div>
+  <div class="page-sub">Ferramentas de cálculo financeiro</div>
+</div>
+<div class="calc-tabs">
+  <div class="calc-tab ${calcTab==='rendafixa'?'active':''}" onclick="calcTab='rendafixa';go('calculadoras')">📊 Renda Fixa</div>
+  <div class="calc-tab ${calcTab==='poupanca'?'active':''}" onclick="calcTab='poupanca';go('calculadoras')">🏦 Poupança</div>
+  <div class="calc-tab ${calcTab==='rendavar'?'active':''}" onclick="calcTab='rendavar';go('calculadoras')">📈 Renda Variável</div>
+  <div class="calc-tab ${calcTab==='milhas'?'active':''}" onclick="calcTab='milhas';go('calculadoras')">✈️ Milhas</div>
+</div>
+${calcTab==='rendafixa'?calcRendaFixa():''}
+${calcTab==='poupanca'?calcPoupanca():''}
+${calcTab==='rendavar'?calcRendaVar():''}
+${calcTab==='milhas'?calcMilhas():''}
+`;
+}
+
+// ── RENDA FIXA ───────────────────────────────────────
+function calcRendaFixa(){
+  return`
+<div class="calc-box">
+  <div class="calc-title">📊 CDB / LCI / LCA</div>
+  <div class="calc-sub">Calcule o rendimento bruto e líquido do seu investimento em renda fixa. LCI e LCA são isentos de IR para pessoa física.</div>
+  <div class="calc-grid">
+    <div class="calc-field">
+      <label>Valor Investido (R$)</label>
+      <input type="text" id="rf-valor" placeholder="10.000,00" class="brl-input" inputmode="decimal"/>
+    </div>
+    <div class="calc-field">
+      <label>Taxa (% ao ano)</label>
+      <input type="number" id="rf-taxa" placeholder="ex: 12.5" step="0.01" min="0"/>
+    </div>
+    <div class="calc-field">
+      <label>Período (meses)</label>
+      <input type="number" id="rf-meses" placeholder="ex: 12" min="1" step="1"/>
+    </div>
+    <div class="calc-field">
+      <label>Tipo de taxa</label>
+      <select id="rf-tipo-taxa">
+        <option value="pre">Prefixada (% a.a.)</option>
+        <option value="cdi">% do CDI</option>
+        <option value="ipca">IPCA + % a.a.</option>
+      </select>
+    </div>
+    <div class="calc-field">
+      <label>CDI atual (% a.a.)</label>
+      <input type="number" id="rf-cdi" placeholder="ex: 10.75" step="0.01" value="10.75"/>
+    </div>
+    <div class="calc-field">
+      <label>IPCA atual (% a.a.)</label>
+      <input type="number" id="rf-ipca" placeholder="ex: 4.83" step="0.01" value="4.83"/>
+    </div>
+    <div class="calc-field">
+      <label>Produto</label>
+      <select id="rf-produto">
+        <option value="cdb">CDB (IR regressivo)</option>
+        <option value="lci">LCI (Isento de IR)</option>
+        <option value="lca">LCA (Isento de IR)</option>
+      </select>
+    </div>
+    <div class="calc-field" style="grid-column:span 2;align-self:flex-end">
+      <button class="calc-btn" onclick="calcularRF()">⚡ Calcular</button>
+    </div>
+  </div>
+  <div id="rf-resultado" style="display:none"></div>
+</div>
+
+<div class="calc-box">
+  <div class="calc-title">📋 Tabela IR — CDB</div>
+  <div class="calc-sub">O IR no CDB é regressivo — quanto mais tempo você deixar, menos paga de imposto.</div>
+  <table style="width:100%;border-collapse:collapse;font-size:.82rem">
+    <thead><tr>
+      <th style="padding:8px 12px;text-align:left;font-size:.68rem;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border)">Prazo</th>
+      <th style="padding:8px 12px;text-align:center;font-size:.68rem;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border)">Alíquota IR</th>
+      <th style="padding:8px 12px;text-align:left;font-size:.68rem;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border)">Dica</th>
+    </tr></thead>
+    <tbody>
+      ${[['Até 180 dias','22,5%','Evite resgatar nesse período'],['181 a 360 dias','20%','Ainda alto'],['361 a 720 dias','17,5%','Faixa intermediária'],['Acima de 720 dias','15%','✅ Melhor alíquota']].map((r,i)=>`<tr style="background:${i%2===0?'var(--surface2)':''}">
+        <td style="padding:9px 12px;color:var(--text)">${r[0]}</td>
+        <td style="padding:9px 12px;text-align:center;font-family:var(--mono);font-weight:600;color:var(--yellow)">${r[1]}</td>
+        <td style="padding:9px 12px;color:var(--text3);font-size:.75rem">${r[2]}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>
+</div>`;
+}
+
+function calcularRF(){
+  const valor = parseBRL(document.getElementById('rf-valor')?.value||'0');
+  const taxa = parseFloat(document.getElementById('rf-taxa')?.value||0);
+  const meses = parseInt(document.getElementById('rf-meses')?.value||0);
+  const tipoTaxa = document.getElementById('rf-tipo-taxa')?.value;
+  const produto = document.getElementById('rf-produto')?.value;
+  const cdi = parseFloat(document.getElementById('rf-cdi')?.value||10.75);
+  const ipca = parseFloat(document.getElementById('rf-ipca')?.value||4.83);
+
+  if(!valor||!taxa||!meses){toast('Preencha todos os campos','err');return;}
+
+  // Calcular taxa efetiva ao ano
+  let taxaAA = taxa;
+  if(tipoTaxa==='cdi') taxaAA = (taxa/100)*cdi;
+  if(tipoTaxa==='ipca') taxaAA = ipca + taxa;
+
+  // Taxa ao mês (capitalização composta)
+  const taxaMes = Math.pow(1+(taxaAA/100), 1/12) - 1;
+  const montante = valor * Math.pow(1+taxaMes, meses);
+  const rendimentoBruto = montante - valor;
+
+  // IR regressivo (CDB) — baseado nos meses totais
+  let aliqIR = 0;
+  if(produto==='cdb'){
+    if(meses<=6) aliqIR=0.225;
+    else if(meses<=12) aliqIR=0.20;
+    else if(meses<=24) aliqIR=0.175;
+    else aliqIR=0.15;
+  }
+  const ir = rendimentoBruto * aliqIR;
+  const rendimentoLiq = rendimentoBruto - ir;
+  const montanteLiq = valor + rendimentoLiq;
+  const rentabilidadeBruta = (rendimentoBruto/valor)*100;
+  const rentabilidadeLiq = (rendimentoLiq/valor)*100;
+
+  // Comparar com CDI 100%
+  const taxaCDI100Mes = Math.pow(1+(cdi/100), 1/12)-1;
+  const montCDI = valor * Math.pow(1+taxaCDI100Mes, meses);
+  const rendCDI = montCDI - valor;
+  const irCDI = rendCDI * (meses<=6?0.225:meses<=12?0.20:meses<=24?0.175:0.15);
+  const rendCDIliq = rendCDI - irCDI;
+  const pctCDI = taxaAA/cdi*100;
+
+  const isentoLabel = produto!=='cdb'?'<span class="calc-badge-green">✅ Isento de IR</span>':'';
+
+  document.getElementById('rf-resultado').style.display='block';
+  document.getElementById('rf-resultado').innerHTML=`
+  <div class="calc-result">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+      <strong style="font-size:.9rem">${produto.toUpperCase()} — ${meses} meses</strong>
+      ${isentoLabel}
+      <span class="calc-badge-${pctCDI>=100?'green':pctCDI>=80?'yellow':'red'}">${pctCDI.toFixed(1)}% do CDI (líquido)</span>
+    </div>
+    <div class="calc-result-grid">
+      <div class="calc-result-item">
+        <span class="calc-result-label">💰 Valor Investido</span>
+        <span class="calc-result-val" style="color:var(--text)">${fmt(valor)}</span>
+      </div>
+      <div class="calc-result-item">
+        <span class="calc-result-label">📈 Rendimento Bruto</span>
+        <span class="calc-result-val" style="color:var(--blue)">${fmt(rendimentoBruto)}</span>
+        <span class="calc-result-sub">${rentabilidadeBruta.toFixed(2)}% no período</span>
+      </div>
+      ${produto==='cdb'?`<div class="calc-result-item">
+        <span class="calc-result-label">🏛️ Imposto de Renda</span>
+        <span class="calc-result-val" style="color:var(--red)">- ${fmt(ir)}</span>
+        <span class="calc-result-sub">Alíquota: ${(aliqIR*100).toFixed(1)}%</span>
+      </div>`:''}
+      <div class="calc-result-item">
+        <span class="calc-result-label">✅ Rendimento Líquido</span>
+        <span class="calc-result-val" style="color:var(--green)">${fmt(rendimentoLiq)}</span>
+        <span class="calc-result-sub">${rentabilidadeLiq.toFixed(2)}% no período</span>
+      </div>
+      <div class="calc-result-item">
+        <span class="calc-result-label">🏦 Montante Final</span>
+        <span class="calc-result-val" style="color:var(--green)">${fmt(montanteLiq)}</span>
+      </div>
+      <div class="calc-result-item">
+        <span class="calc-result-label">📊 Taxa efetiva a.a.</span>
+        <span class="calc-result-val" style="color:var(--purple)">${taxaAA.toFixed(2)}% a.a.</span>
+      </div>
+    </div>
+    <div class="calc-divider"></div>
+    <div style="font-size:.78rem;color:var(--text3)">
+      <strong style="color:var(--text2)">Comparação:</strong> CDI 100% líquido no mesmo período = <span style="font-family:var(--mono);color:var(--teal)">${fmt(rendCDIliq)}</span>
+      ${rendimentoLiq>=rendCDIliq?'<span class="calc-badge-green" style="margin-left:8px">✅ Melhor que CDI 100%</span>':'<span class="calc-badge-red" style="margin-left:8px">⚠️ Abaixo do CDI 100%</span>'}
+    </div>
+  </div>`;
+}
+
+// ── POUPANÇA ─────────────────────────────────────────
+function calcPoupanca(){
+  return`
+<div class="calc-box">
+  <div class="calc-title">🏦 Calculadora de Poupança</div>
+  <div class="calc-sub">A poupança rende 70% da Selic quando a Selic está acima de 8,5% a.a., ou 0,5% a.m. + TR quando abaixo. Hoje (Selic ~10,75%) rende ~70% da Selic.</div>
+  <div class="calc-grid-2">
+    <div class="calc-field">
+      <label>Valor Inicial (R$)</label>
+      <input type="text" id="poup-inicial" placeholder="1.000,00" class="brl-input" inputmode="decimal"/>
+    </div>
+    <div class="calc-field">
+      <label>Aporte Mensal (R$)</label>
+      <input type="text" id="poup-aporte" placeholder="200,00" class="brl-input" inputmode="decimal"/>
+    </div>
+    <div class="calc-field">
+      <label>Selic atual (% a.a.)</label>
+      <input type="number" id="poup-selic" placeholder="10.75" step="0.01" value="10.75"/>
+    </div>
+    <div class="calc-field">
+      <label>Período (meses)</label>
+      <input type="number" id="poup-meses" placeholder="24" min="1" step="1"/>
+    </div>
+  </div>
+  <button class="calc-btn" onclick="calcularPoup()">⚡ Calcular</button>
+  <div id="poup-resultado" style="display:none;margin-top:16px"></div>
+</div>
+
+<div class="calc-box">
+  <div class="calc-title">📋 Como funciona a Poupança</div>
+  <div class="calc-sub">Regras atuais da poupança no Brasil:</div>
+  <table style="width:100%;border-collapse:collapse;font-size:.82rem">
+    <thead><tr>
+      <th style="padding:8px 12px;text-align:left;font-size:.68rem;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border)">Selic</th>
+      <th style="padding:8px 12px;text-align:left;font-size:.68rem;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border)">Rendimento</th>
+      <th style="padding:8px 12px;text-align:left;font-size:.68rem;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border)">IR</th>
+    </tr></thead>
+    <tbody>
+      ${[['Acima de 8,5% a.a.','70% da Selic a.a. + TR','Isento ✅'],['Até 8,5% a.a.','0,5% a.m. + TR','Isento ✅']].map((r,i)=>`<tr style="background:${i%2===0?'var(--surface2)':''}">
+        <td style="padding:9px 12px;color:var(--text)">${r[0]}</td>
+        <td style="padding:9px 12px;font-family:var(--mono);color:var(--yellow)">${r[1]}</td>
+        <td style="padding:9px 12px;color:var(--green)">${r[2]}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>
+</div>`;
+}
+
+function calcularPoup(){
+  const inicial = parseBRL(document.getElementById('poup-inicial')?.value||'0');
+  const aporte = parseBRL(document.getElementById('poup-aporte')?.value||'0');
+  const selic = parseFloat(document.getElementById('poup-selic')?.value||10.75);
+  const meses = parseInt(document.getElementById('poup-meses')?.value||0);
+
+  if(!meses){toast('Informe o período','err');return;}
+  if(!inicial&&!aporte){toast('Informe valor inicial ou aporte','err');return;}
+
+  const taxaAA = selic>8.5 ? selic*0.70 : 6.17; // ~0.5%am
+  const taxaMes = Math.pow(1+(taxaAA/100), 1/12)-1;
+
+  let saldo = inicial;
+  let totalAportado = inicial;
+  for(let i=0;i<meses;i++){
+    saldo = saldo*(1+taxaMes)+aporte;
+    totalAportado+=aporte;
+  }
+  const rendimento = saldo - totalAportado;
+  const rentTotal = (rendimento/totalAportado)*100;
+
+  // Comparar CDB 100% CDI com IR
+  const taxaCDIMes = Math.pow(1+(selic/100),1/12)-1;
+  let saldoCDI = inicial;
+  for(let i=0;i<meses;i++) saldoCDI=saldoCDI*(1+taxaCDIMes)+aporte;
+  const rendCDI = saldoCDI - totalAportado;
+  const aliqIR = meses<=6?0.225:meses<=12?0.20:meses<=24?0.175:0.15;
+  const rendCDIliq = rendCDI*(1-aliqIR);
+  const saldoCDIliq = totalAportado + rendCDIliq;
+  const melhorCDI = saldoCDIliq > saldo;
+
+  document.getElementById('poup-resultado').style.display='block';
+  document.getElementById('poup-resultado').innerHTML=`
+  <div class="calc-result">
+    <div style="margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <strong>Poupança — ${meses} meses</strong>
+      <span class="calc-badge-green">✅ Isento de IR</span>
+      ${melhorCDI?'<span class="calc-badge-red">⚠️ CDB 100% CDI rende mais</span>':'<span class="calc-badge-green">✅ Melhor que CDB no período</span>'}
+    </div>
+    <div class="calc-result-grid">
+      <div class="calc-result-item">
+        <span class="calc-result-label">💰 Total Aportado</span>
+        <span class="calc-result-val" style="color:var(--text)">${fmt(totalAportado)}</span>
+      </div>
+      <div class="calc-result-item">
+        <span class="calc-result-label">📈 Rendimento</span>
+        <span class="calc-result-val" style="color:var(--green)">${fmt(rendimento)}</span>
+        <span class="calc-result-sub">${rentTotal.toFixed(2)}% no período</span>
+      </div>
+      <div class="calc-result-item">
+        <span class="calc-result-label">🏦 Saldo Final</span>
+        <span class="calc-result-val" style="color:var(--green)">${fmt(saldo)}</span>
+      </div>
+      <div class="calc-result-item">
+        <span class="calc-result-label">📊 Taxa usada</span>
+        <span class="calc-result-val" style="color:var(--purple)">${taxaAA.toFixed(2)}% a.a.</span>
+        <span class="calc-result-sub">70% da Selic</span>
+      </div>
+    </div>
+    <div class="calc-divider"></div>
+    <div style="font-size:.78rem;color:var(--text3)">
+      CDB 100% CDI líquido (IR ${(aliqIR*100).toFixed(0)}%) = <span style="font-family:var(--mono);color:var(--teal)">${fmt(saldoCDIliq)}</span>
+      — diferença: <span style="font-family:var(--mono);color:${melhorCDI?'var(--red)':'var(--green)'}">${fmt(Math.abs(saldo-saldoCDIliq))}</span>
+      ${melhorCDI?'a favor do CDB':'a favor da poupança'}
+    </div>
+  </div>`;
+}
+
+// ── RENDA VARIÁVEL ───────────────────────────────────
+function calcRendaVar(){
+  return`
+<div class="calc-box">
+  <div class="calc-title">📈 Calculadora de Ações / FIIs</div>
+  <div class="calc-sub">Calcule o retorno de uma ação ou FII considerando preço de compra, venda, dividendos recebidos e imposto de renda.</div>
+  <div class="calc-grid">
+    <div class="calc-field">
+      <label>Preço de Compra (R$)</label>
+      <input type="text" id="rv-compra" placeholder="30,00" class="brl-input" inputmode="decimal"/>
+    </div>
+    <div class="calc-field">
+      <label>Preço Atual / Venda (R$)</label>
+      <input type="text" id="rv-venda" placeholder="38,50" class="brl-input" inputmode="decimal"/>
+    </div>
+    <div class="calc-field">
+      <label>Quantidade de cotas</label>
+      <input type="number" id="rv-qtd" placeholder="100" min="1" step="1"/>
+    </div>
+    <div class="calc-field">
+      <label>Dividendos recebidos (R$)</label>
+      <input type="text" id="rv-divid" placeholder="0,00" class="brl-input" inputmode="decimal"/>
+    </div>
+    <div class="calc-field">
+      <label>Tipo</label>
+      <select id="rv-tipo">
+        <option value="acao">Ação (IR 15% sobre lucro)</option>
+        <option value="fii">FII (IR 20% sobre lucro)</option>
+        <option value="etf">ETF (IR 15% sobre lucro)</option>
+      </select>
+    </div>
+    <div class="calc-field" style="align-self:flex-end">
+      <button class="calc-btn" onclick="calcularRV()">⚡ Calcular</button>
+    </div>
+  </div>
+  <div id="rv-resultado" style="display:none"></div>
+</div>
+
+<div class="calc-box">
+  <div class="calc-title">📊 Dividend Yield</div>
+  <div class="calc-sub">Descubra o rendimento de dividendos de um ativo.</div>
+  <div class="calc-grid-2">
+    <div class="calc-field">
+      <label>Dividendo mensal por cota (R$)</label>
+      <input type="text" id="dy-divid" placeholder="0,80" class="brl-input" inputmode="decimal"/>
+    </div>
+    <div class="calc-field">
+      <label>Preço atual da cota (R$)</label>
+      <input type="text" id="dy-preco" placeholder="100,00" class="brl-input" inputmode="decimal"/>
+    </div>
+  </div>
+  <button class="calc-btn" onclick="calcularDY()">⚡ Calcular DY</button>
+  <div id="dy-resultado" style="display:none;margin-top:16px"></div>
+</div>`;
+}
+
+function calcularRV(){
+  const compra = parseBRL(document.getElementById('rv-compra')?.value||'0');
+  const venda = parseBRL(document.getElementById('rv-venda')?.value||'0');
+  const qtd = parseInt(document.getElementById('rv-qtd')?.value||0);
+  const divid = parseBRL(document.getElementById('rv-divid')?.value||'0');
+  const tipo = document.getElementById('rv-tipo')?.value;
+
+  if(!compra||!venda||!qtd){toast('Preencha os campos obrigatórios','err');return;}
+
+  const custoTotal = compra*qtd;
+  const valorVenda = venda*qtd;
+  const lucroCapital = valorVenda - custoTotal;
+  const aliqIR = tipo==='fii'?0.20:0.15;
+  const ir = lucroCapital>0 ? lucroCapital*aliqIR : 0;
+  // FII dividendos são isentos de IR; ações não
+  const irDivid = tipo==='acao' ? 0 : 0; // simplificado
+  const lucroLiq = lucroCapital - ir + divid;
+  const rentBruta = (lucroCapital/custoTotal)*100;
+  const rentLiq = (lucroLiq/custoTotal)*100;
+  const dyObtido = divid>0?(divid/custoTotal)*100:0;
+
+  document.getElementById('rv-resultado').style.display='block';
+  document.getElementById('rv-resultado').innerHTML=`
+  <div class="calc-result">
+    <div style="margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <strong>${tipo.toUpperCase()} — ${qtd} cotas</strong>
+      ${lucroCapital>=0?'<span class="calc-badge-green">📈 Lucro</span>':'<span class="calc-badge-red">📉 Prejuízo</span>'}
+    </div>
+    <div class="calc-result-grid">
+      <div class="calc-result-item">
+        <span class="calc-result-label">💰 Custo Total</span>
+        <span class="calc-result-val" style="color:var(--text)">${fmt(custoTotal)}</span>
+        <span class="calc-result-sub">${fmt(compra)} × ${qtd} cotas</span>
+      </div>
+      <div class="calc-result-item">
+        <span class="calc-result-label">💸 Valor de Venda</span>
+        <span class="calc-result-val" style="color:var(--blue)">${fmt(valorVenda)}</span>
+        <span class="calc-result-sub">${fmt(venda)} × ${qtd} cotas</span>
+      </div>
+      <div class="calc-result-item">
+        <span class="calc-result-label">📊 Lucro Capital</span>
+        <span class="calc-result-val" style="color:${lucroCapital>=0?'var(--green)':'var(--red)'}">${fmt(lucroCapital)}</span>
+        <span class="calc-result-sub">${rentBruta.toFixed(2)}% bruto</span>
+      </div>
+      ${ir>0?`<div class="calc-result-item">
+        <span class="calc-result-label">🏛️ IR sobre lucro</span>
+        <span class="calc-result-val" style="color:var(--red)">- ${fmt(ir)}</span>
+        <span class="calc-result-sub">Alíquota: ${(aliqIR*100).toFixed(0)}%</span>
+      </div>`:''}
+      ${divid>0?`<div class="calc-result-item">
+        <span class="calc-result-label">💵 Dividendos</span>
+        <span class="calc-result-val" style="color:var(--teal)">${fmt(divid)}</span>
+        <span class="calc-result-sub">${dyObtido.toFixed(2)}% DY obtido</span>
+      </div>`:''}
+      <div class="calc-result-item">
+        <span class="calc-result-label">✅ Resultado Líquido</span>
+        <span class="calc-result-val" style="color:${lucroLiq>=0?'var(--green)':'var(--red)'}">${fmt(lucroLiq)}</span>
+        <span class="calc-result-sub">${rentLiq.toFixed(2)}% líquido</span>
+      </div>
+    </div>
+    ${tipo==='fii'?'<div class="calc-divider"></div><div style="font-size:.75rem;color:var(--text3)">💡 Dividendos de FIIs são <strong style="color:var(--green)">isentos de IR</strong> para pessoa física. IR incide apenas sobre ganho de capital na venda.</div>':''}
+  </div>`;
+}
+
+function calcularDY(){
+  const divid = parseBRL(document.getElementById('dy-divid')?.value||'0');
+  const preco = parseBRL(document.getElementById('dy-preco')?.value||'0');
+  if(!divid||!preco){toast('Preencha os campos','err');return;}
+  const dyMensal = (divid/preco)*100;
+  const dyAnual = dyMensal*12;
+  const mesesParaPagar = preco/divid;
+  document.getElementById('dy-resultado').style.display='block';
+  document.getElementById('dy-resultado').innerHTML=`
+  <div class="calc-result">
+    <div class="calc-result-grid">
+      <div class="calc-result-item">
+        <span class="calc-result-label">📅 DY Mensal</span>
+        <span class="calc-result-val" style="color:var(--green)">${dyMensal.toFixed(2)}%</span>
+      </div>
+      <div class="calc-result-item">
+        <span class="calc-result-label">📊 DY Anual</span>
+        <span class="calc-result-val" style="color:var(--blue)">${dyAnual.toFixed(2)}%</span>
+      </div>
+      <div class="calc-result-item">
+        <span class="calc-result-label">⏱️ Meses para pagar o preço</span>
+        <span class="calc-result-val" style="color:var(--purple)">${mesesParaPagar.toFixed(0)} meses</span>
+        <span class="calc-result-sub">~${(mesesParaPagar/12).toFixed(1)} anos</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── MILHAS ────────────────────────────────────────────
+function calcMilhas(){
+  return`
+<div class="calc-box">
+  <div class="calc-title">✈️ Vale a pena comprar milhas?</div>
+  <div class="calc-sub">Informe a oferta de compra de milhas e quanto você usaria por passagem para saber se a oferta vale a pena.</div>
+  <div class="calc-grid">
+    <div class="calc-field">
+      <label>Preço da oferta (R$)</label>
+      <input type="text" id="m-preco" placeholder="ex: 100,00" class="brl-input" inputmode="decimal"/>
+    </div>
+    <div class="calc-field">
+      <label>Quantidade de pontos</label>
+      <input type="number" id="m-pontos" placeholder="ex: 500" min="1" step="1"/>
+    </div>
+    <div class="calc-field">
+      <label>Passagem que quer resgatar (R$)</label>
+      <input type="text" id="m-passagem" placeholder="ex: 2.500,00" class="brl-input" inputmode="decimal"/>
+    </div>
+    <div class="calc-field">
+      <label>Milhas necessárias para passagem</label>
+      <input type="number" id="m-milhas-pass" placeholder="ex: 25000" min="1" step="1"/>
+    </div>
+    <div class="calc-field">
+      <label>Taxa de embarque (R$)</label>
+      <input type="text" id="m-taxa" placeholder="ex: 250,00" class="brl-input" inputmode="decimal"/>
+    </div>
+    <div class="calc-field" style="align-self:flex-end">
+      <button class="calc-btn" onclick="calcularMilhas()">⚡ Calcular</button>
+    </div>
+  </div>
+  <div id="milhas-resultado" style="display:none"></div>
+</div>
+
+<div class="calc-box">
+  <div class="calc-title">💱 Conversor de Pontos em Reais</div>
+  <div class="calc-sub">Descubra quanto valem seus pontos em reais, com base no valor do milheiro.</div>
+  <div class="calc-grid-2">
+    <div class="calc-field">
+      <label>Quantidade de pontos</label>
+      <input type="number" id="conv-pontos" placeholder="ex: 10000" min="1" step="1"/>
+    </div>
+    <div class="calc-field">
+      <label>Valor do milheiro (R$)</label>
+      <input type="text" id="conv-milheiro" placeholder="ex: 35,00" class="brl-input" inputmode="decimal"/>
+    </div>
+  </div>
+  <button class="calc-btn" onclick="calcularConversao()">⚡ Converter</button>
+  <div id="conv-resultado" style="display:none;margin-top:16px"></div>
+</div>
+
+<div class="calc-box">
+  <div class="calc-title">📋 Referência — Valor do Milheiro</div>
+  <div class="calc-sub">Valores médios de mercado por programa (podem variar conforme a oferta):</div>
+  <table style="width:100%;border-collapse:collapse;font-size:.82rem">
+    <thead><tr>
+      <th style="padding:8px 12px;text-align:left;font-size:.68rem;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border)">Programa</th>
+      <th style="padding:8px 12px;text-align:center;font-size:.68rem;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border)">Valor médio do milheiro</th>
+      <th style="padding:8px 12px;text-align:left;font-size:.68rem;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border)">Observação</th>
+    </tr></thead>
+    <tbody>
+      ${[['LATAM Pass','R$ 25–40','Bom para América do Sul'],['Smiles (GOL)','R$ 20–35','Promoções frequentes'],['TudoAzul','R$ 18–30','Boa liquidez'],['Livelo','R$ 15–25','Transfere para vários'],['Azul Fidelidade','R$ 22–38','Parceria Air France/KLM']].map((r,i)=>`<tr style="background:${i%2===0?'var(--surface2)':''}">
+        <td style="padding:9px 12px;color:var(--text);font-weight:500">${r[0]}</td>
+        <td style="padding:9px 12px;text-align:center;font-family:var(--mono);color:var(--yellow)">${r[1]}</td>
+        <td style="padding:9px 12px;color:var(--text3);font-size:.75rem">${r[2]}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>
+</div>`;
+}
+
+function calcularMilhas(){
+  const preco = parseBRL(document.getElementById('m-preco')?.value||'0');
+  const pontos = parseInt(document.getElementById('m-pontos')?.value||0);
+  const passagem = parseBRL(document.getElementById('m-passagem')?.value||'0');
+  const milhasPass = parseInt(document.getElementById('m-milhas-pass')?.value||0);
+  const taxa = parseBRL(document.getElementById('m-taxa')?.value||'0');
+
+  if(!preco||!pontos||!passagem||!milhasPass){toast('Preencha todos os campos','err');return;}
+
+  // Custo por milheiro na oferta
+  const milheiroPago = (preco/pontos)*1000;
+  // Valor efetivo da passagem (descontando taxa)
+  const valorEfetivo = passagem - taxa;
+  // Custo para comprar as milhas necessárias
+  const custoMilhas = (preco/pontos)*milhasPass;
+  const custoTotal = custoMilhas + taxa;
+  // Valor do milheiro implícito na passagem
+  const milheiroPassagem = (valorEfetivo/milhasPass)*1000;
+  const economia = passagem - custoTotal;
+  const valePena = economia > 0;
+  const pctEconomia = (economia/passagem)*100;
+
+  document.getElementById('milhas-resultado').style.display='block';
+  document.getElementById('milhas-resultado').innerHTML=`
+  <div class="calc-result">
+    <div style="margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <strong>Análise da oferta</strong>
+      ${valePena?`<span class="calc-badge-green">✅ Vale a pena! Economia de ${pctEconomia.toFixed(1)}%</span>`:`<span class="calc-badge-red">❌ Não vale! Você gastaria mais</span>`}
+    </div>
+    <div class="calc-result-grid">
+      <div class="calc-result-item">
+        <span class="calc-result-label">💳 Milheiro pago na oferta</span>
+        <span class="calc-result-val" style="color:var(--text)">${fmt(milheiroPago)}</span>
+      </div>
+      <div class="calc-result-item">
+        <span class="calc-result-label">✈️ Milheiro implícito na passagem</span>
+        <span class="calc-result-val" style="color:var(--blue)">${fmt(milheiroPassagem)}</span>
+      </div>
+      <div class="calc-result-item">
+        <span class="calc-result-label">💰 Custo das milhas</span>
+        <span class="calc-result-val" style="color:var(--purple)">${fmt(custoMilhas)}</span>
+      </div>
+      <div class="calc-result-item">
+        <span class="calc-result-label">🧾 Custo total (milhas + taxa)</span>
+        <span class="calc-result-val" style="color:var(--yellow)">${fmt(custoTotal)}</span>
+      </div>
+      <div class="calc-result-item">
+        <span class="calc-result-label">🎟️ Preço da passagem em dinheiro</span>
+        <span class="calc-result-val" style="color:var(--text)">${fmt(passagem)}</span>
+      </div>
+      <div class="calc-result-item">
+        <span class="calc-result-label">${valePena?'✅ Economia':'❌ Prejuízo'}</span>
+        <span class="calc-result-val" style="color:${valePena?'var(--green)':'var(--red)'}">${fmt(Math.abs(economia))}</span>
+        <span class="calc-result-sub">${valePena?'você economiza':'você gasta a mais'} vs comprar direto</span>
+      </div>
+    </div>
+    <div class="calc-divider"></div>
+    <div style="font-size:.75rem;color:var(--text3)">
+      💡 <strong style="color:var(--text2)">Regra prática:</strong> Se o milheiro pago (${fmt(milheiroPago)}) for menor que o milheiro implícito na passagem (${fmt(milheiroPassagem)}), a oferta vale a pena.
+    </div>
+  </div>`;
+}
+
+function calcularConversao(){
+  const pontos = parseInt(document.getElementById('conv-pontos')?.value||0);
+  const milheiro = parseBRL(document.getElementById('conv-milheiro')?.value||'0');
+  if(!pontos||!milheiro){toast('Preencha os campos','err');return;}
+  const valor = (pontos/1000)*milheiro;
+  document.getElementById('conv-resultado').style.display='block';
+  document.getElementById('conv-resultado').innerHTML=`
+  <div class="calc-result">
+    <div class="calc-result-grid">
+      <div class="calc-result-item">
+        <span class="calc-result-label">✈️ Seus pontos valem</span>
+        <span class="calc-result-val" style="color:var(--green)">${fmt(valor)}</span>
+        <span class="calc-result-sub">${pontos.toLocaleString('pt-BR')} pts × R$ ${fmt(milheiro)}/mil</span>
+      </div>
+      <div class="calc-result-item">
+        <span class="calc-result-label">📊 Por ponto</span>
+        <span class="calc-result-val" style="color:var(--blue)">R$ ${(milheiro/1000).toFixed(4)}</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ═══════════════════ METAS ══════════════════════════
+function pMetas(){
+  const metas = S.metas||[];
+  const ativas = metas.filter(m=>!m.concluida);
+  const concluidas = metas.filter(m=>m.concluida);
+
+  function metaCard(meta, idx){
+    const pct = meta.objetivo>0 ? Math.min((meta.atual/meta.objetivo)*100,100) : 0;
+    const falta = Math.max((meta.objetivo||0)-(meta.atual||0),0);
+    const over = (meta.atual||0)>=(meta.objetivo||0) && meta.objetivo>0;
+    const barColor = over?'var(--green)':pct>70?'var(--teal)':pct>40?'var(--blue)':'var(--purple)';
+    const prazoStr = meta.prazo ? new Date(meta.prazo+'T00:00:00').toLocaleDateString('pt-BR') : null;
+    const diasRestantes = meta.prazo ? Math.ceil((new Date(meta.prazo+'T00:00:00')-new Date())/(1000*60*60*24)) : null;
+    return`<div class="meta-card ${meta.concluida?'meta-concluida':''}">
+      <div class="meta-card-top" style="background:${meta.cor||'var(--purple)'}"></div>
+      <div class="meta-card-body">
+        <div class="meta-title">
+          <span>${meta.emoji||'🎯'}</span>
+          <span>${meta.nome||'Meta'}</span>
+          ${meta.concluida?'<span class="badge-concluida">✅ Concluída</span>':''}
+        </div>
+        ${meta.obs?`<div class="meta-obs">"${meta.obs}"</div>`:''}
+        <div class="meta-values">
+          <div>
+            <div class="meta-atual">${fmt(meta.atual||0)}</div>
+            <div class="meta-total">de ${fmt(meta.objetivo||0)}</div>
+          </div>
+          <div class="meta-pct" style="color:${barColor}">${pct.toFixed(0)}%</div>
+        </div>
+        <div class="meta-bar"><div class="meta-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
+        <div class="meta-footer">
+          <div class="meta-prazo">
+            ${prazoStr?`<span>📅 ${prazoStr}</span>${!meta.concluida&&diasRestantes!==null?`<span style="margin-left:6px;color:${diasRestantes<30?'var(--red)':diasRestantes<90?'var(--yellow)':'var(--text3)'}">(${diasRestantes>0?diasRestantes+'d restantes':'prazo vencido'})</span>`:''}`:'' }
+            ${!prazoStr?`<span style="color:var(--text3)">Sem prazo definido</span>`:''}
+            ${!meta.concluida&&over?`<span style="color:var(--green);margin-left:6px">🎉 Meta atingida!</span>`:''}
+            ${!meta.concluida&&!over?`<span style="color:var(--text3);margin-left:6px">Falta ${fmt(falta)}</span>`:''}
+          </div>
+          <div class="meta-actions">
+            ${!meta.concluida?`<button class="btn-ic" title="Adicionar valor" onclick="addValorMeta(${idx})">💰</button>`:''}
+            <button class="btn-ic" title="Editar" onclick="openMetaModal(${idx})">✏️</button>
+            <button class="btn-ic" title="${meta.concluida?'Reabrir':'Concluir'}" onclick="toggleMetaConcluida(${idx})">${meta.concluida?'↩️':'✅'}</button>
+            <button class="btn-ic" title="Excluir" onclick="deleteMeta(${idx})">🗑</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  return`
+<div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between">
+  <div><div class="page-title">🎯 Metas Financeiras</div>
+  <div class="page-sub">${ativas.length} ativa(s) · ${concluidas.length} concluída(s)</div></div>
+  <button class="btn btn-p" onclick="openMetaModal()">+ Nova Meta</button>
+</div>
+
+${metas.length===0?`<div class="empty" style="padding:80px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)">
+  <div class="empty-icon">🎯</div>
+  <div class="empty-text" style="margin-bottom:16px">Nenhuma meta ainda.<br>Crie sua primeira meta financeira!</div>
+  <button class="btn btn-p" onclick="openMetaModal()">+ Criar Meta</button>
+</div>`:''}
+
+${ativas.length>0?`
+<div style="font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:12px">Em andamento — ${ativas.length}</div>
+<div class="metas-grid">${ativas.map((m,i)=>metaCard(m,metas.indexOf(m))).join('')}</div>`:''}
+
+${concluidas.length>0?`
+<div style="font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:12px;margin-top:8px">Concluídas — ${concluidas.length}</div>
+<div class="metas-grid">${concluidas.map((m,i)=>metaCard(m,metas.indexOf(m))).join('')}</div>`:''}`;
+}
+
+function openMetaModal(idx=null){
+  const isEdit = idx!==null;
+  const meta = isEdit ? S.metas[idx] : {nome:'',emoji:'🎯',objetivo:0,atual:0,prazo:'',obs:'',cor:'#b388ff',concluida:false};
+  const cores = ['#b388ff','#5b8dee','#3dd68c','#ffd166','#f06292','#4dd0e1','#ff8a65','#9fa8da'];
+  const emojis = ['🎯','🏠','🚗','✈️','💍','📱','🎓','🏖️','💻','👜','🐾','🏋️','🎸','📚','💎'];
+  const ov=document.createElement('div');ov.className='mo';ov.id='modal-overlay';
+  ov.onclick=e=>{if(e.target===ov)closeM();};
+  ov.innerHTML=`<div class="md" style="width:500px">
+    <div class="mh"><div class="mt">${isEdit?'✏️ Editar Meta':'🎯 Nova Meta'}</div><button class="btn-ic" onclick="closeM()">✕</button></div>
+    <div class="mb">
+      <div class="fg">
+        <div class="fi s2">
+          <label>Nome da Meta</label>
+          <input type="text" id="meta-nome" value="${meta.nome}" placeholder="ex: Viagem para Europa, Notebook novo…"/>
+        </div>
+        <div class="fi">
+          <label>Valor Objetivo (R$)</label>
+          <input type="text" id="meta-obj" value="${meta.objetivo?formatBRL(meta.objetivo):''}" placeholder="0,00" class="brl-input" inputmode="decimal"/>
+        </div>
+        <div class="fi">
+          <label>Já guardei (R$)</label>
+          <input type="text" id="meta-atual" value="${meta.atual?formatBRL(meta.atual):''}" placeholder="0,00" class="brl-input" inputmode="decimal"/>
+        </div>
+        <div class="fi">
+          <label>Prazo (opcional)</label>
+          <input type="date" id="meta-prazo" value="${meta.prazo||''}"/>
+        </div>
+        <div class="fi">
+          <label>Emoji</label>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
+            ${emojis.map(e=>`<button onclick="document.getElementById('meta-emoji').value='${e}';document.querySelectorAll('.emoji-btn').forEach(b=>b.style.outline='none');this.style.outline='2px solid var(--blue)'" class="emoji-btn" style="font-size:1.2rem;padding:4px 6px;border-radius:6px;background:var(--surface3);border:1px solid var(--border);cursor:pointer;outline:${meta.emoji===e?'2px solid var(--blue)':'none'}">${e}</button>`).join('')}
+          </div>
+          <input type="hidden" id="meta-emoji" value="${meta.emoji||'🎯'}"/>
+        </div>
+        <div class="fi">
+          <label>Cor</label>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
+            ${cores.map(c=>`<button onclick="document.getElementById('meta-cor').value='${c}';document.querySelectorAll('.meta-cor-btn').forEach(b=>b.style.outline='none');this.style.outline='2px solid white'" class="meta-cor-btn" style="width:24px;height:24px;border-radius:50%;background:${c};border:none;cursor:pointer;outline:${meta.cor===c?'2px solid white':'none'}"></button>`).join('')}
+          </div>
+          <input type="hidden" id="meta-cor" value="${meta.cor||'#b388ff'}"/>
+        </div>
+        <div class="fi s2">
+          <label>Observações</label>
+          <textarea id="meta-obs" placeholder="Ex: Quero comprar até o fim do ano, prioridade alta…" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;color:var(--text);font-size:.85rem;width:100%;resize:vertical;min-height:70px;font-family:var(--font)">${meta.obs||''}</textarea>
+        </div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-g" onclick="closeM()">Cancelar</button>
+      <button class="btn btn-p" onclick="saveMeta(${idx})">Salvar</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  setTimeout(()=>{document.getElementById('meta-nome')?.focus();applyBRLMasks();},50);
+}
+
+function saveMeta(idx){
+  const nome = document.getElementById('meta-nome').value.trim();
+  if(!nome){toast('Informe o nome da meta','err');return;}
+  const meta = {
+    nome,
+    emoji: document.getElementById('meta-emoji').value||'🎯',
+    cor:   document.getElementById('meta-cor').value||'#b388ff',
+    objetivo: parseBRL(document.getElementById('meta-obj').value||'0'),
+    atual:    parseBRL(document.getElementById('meta-atual').value||'0'),
+    prazo:    document.getElementById('meta-prazo').value||'',
+    obs:      document.getElementById('meta-obs').value.trim(),
+    concluida: idx!==null ? (S.metas[idx].concluida||false) : false,
+  };
+  if(idx===null) S.metas.push(meta);
+  else S.metas[idx]=meta;
+  save(); closeM(); toast(`Meta "${nome}" salva!`); go('metas');
+}
+
+function addValorMeta(idx){
+  const meta = S.metas[idx];
+  const ov=document.createElement('div');ov.className='mo';ov.id='modal-overlay';
+  ov.onclick=e=>{if(e.target===ov)closeM();};
+  ov.innerHTML=`<div class="md" style="width:360px">
+    <div class="mh"><div class="mt">💰 Adicionar valor — ${meta.nome}</div><button class="btn-ic" onclick="closeM()">✕</button></div>
+    <div class="mb">
+      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:16px;display:flex;justify-content:space-between">
+        <span style="font-size:.8rem;color:var(--text3)">Guardado atual</span>
+        <span style="font-family:var(--mono);font-weight:700;color:var(--green)">${fmt(meta.atual||0)}</span>
+      </div>
+      <div class="fi">
+        <label>Valor a adicionar (R$)</label>
+        <input type="text" id="add-val" placeholder="0,00" class="brl-input" inputmode="decimal"/>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-g" onclick="closeM()">Cancelar</button>
+      <button class="btn btn-p" onclick="confirmAddValor(${idx})">Adicionar</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  setTimeout(()=>{document.getElementById('add-val')?.focus();applyBRLMasks();},50);
+}
+
+function confirmAddValor(idx){
+  const v = parseBRL(document.getElementById('add-val').value||'0');
+  if(!v||v<=0){toast('Valor inválido','err');return;}
+  S.metas[idx].atual = (S.metas[idx].atual||0)+v;
+  if(S.metas[idx].objetivo>0 && S.metas[idx].atual>=S.metas[idx].objetivo){
+    toast('🎉 Meta atingida! Parabéns!');
+  } else {
+    toast(`${fmt(v)} adicionado à meta!`);
+  }
+  save(); closeM(); go('metas');
+}
+
+function toggleMetaConcluida(idx){
+  S.metas[idx].concluida = !S.metas[idx].concluida;
+  save(); toast(S.metas[idx].concluida?'Meta concluída! 🎉':'Meta reaberta'); go('metas');
+}
+
+function deleteMeta(idx){
+  if(!confirm(`Excluir a meta "${S.metas[idx].nome}"?`))return;
+  S.metas.splice(idx,1);
+  save(); toast('Meta removida','err'); go('metas');
+}
+
 function goM(m){S.month=m;go('dashboard');}
 
 // ═══════════════════ CAT MANAGEMENT ════════════════
