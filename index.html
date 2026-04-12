@@ -334,8 +334,6 @@ let S={
 
 const getCards=()=>S.cards&&S.cards.length?S.cards:DEF_CARDS;
 const getTipos=()=>[...TIPOS_PAG,...getCards().map(c=>c.nome)];
-const getMacro=id=>getMacros().find(m=>m.id===id);
-const getCatMacro=cat=>getMacros().find(m=>m.cats.includes(cat));
 
 function mk(m){return m||S.month;}
 function gm(m){
