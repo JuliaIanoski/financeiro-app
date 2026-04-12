@@ -682,39 +682,113 @@ function quickAdd(){
   go('trans');
 }
 
+
+// ══════════════ PARCELAS HELPERS ═════════════════
+// Retorna todas as contas a receber do mês atual:
+// 1. Contas simples cadastradas neste mês
+// 2. Parcelas de contas parceladas (de qualquer mês) que vencem neste mês
+function getReceberDoMes(m){
+  const mesAtual=m||S.month;
+  const result=[];
+  // Scan all months for receber items
+  Object.entries(S.data).forEach(([mk,md])=>{
+    (md.receber||[]).forEach((item,idx)=>{
+      if(!item.parc||item.parc.length===0){
+        // Conta simples: mostrar apenas no mês de cadastro
+        if(mk===mesAtual) result.push({item,idx,mk,parcIdx:null});
+      } else {
+        // Conta parcelada: mostrar a parcela que vence neste mês
+        item.parc.forEach((p,pi)=>{
+          const pMes=p.venc?p.venc.slice(0,7):mk;
+          if(pMes===mesAtual){
+            result.push({item,idx,mk,parcIdx:pi,parc:p});
+          }
+        });
+      }
+    });
+  });
+  return result;
+}
+
+function getPagarDoMes(m){
+  const mesAtual=m||S.month;
+  const result=[];
+  Object.entries(S.data).forEach(([mk,md])=>{
+    (md.pagar||[]).forEach((item,idx)=>{
+      if(!item.parc||item.parc.length===0){
+        if(mk===mesAtual) result.push({item,idx,mk,parcIdx:null});
+      } else {
+        item.parc.forEach((p,pi)=>{
+          const pMes=p.venc?p.venc.slice(0,7):mk;
+          if(pMes===mesAtual){
+            result.push({item,idx,mk,parcIdx:pi,parc:p});
+          }
+        });
+      }
+    });
+  });
+  return result;
+}
+
 // ══════════════ CONTAS A RECEBER ══════════════════
 function pReceber(){
-  const items=gm().receber;
-  const total=sum(items.filter(r=>r.status!=='pago'),'valor');
+  const rows=getReceberDoMes();
+  const pendente=rows.reduce((s,r)=>{
+    const v=r.parc?r.parc.valor:r.item.valor;
+    const st=r.parc?r.parc.status:r.item.status;
+    return s+(st!=='pago'?v:0);
+  },0);
   return`
 <div class="ph" style="display:flex;align-items:flex-start;justify-content:space-between">
-  <div><div class="pt">📥 Contas a Receber</div><div class="ps">${mname(S.month)} · ${items.length} item(s) · Pendente: ${fmt(total)}</div></div>
+  <div><div class="pt">📥 Contas a Receber</div><div class="ps">${mname(S.month)} · ${rows.length} item(s) · Pendente: ${fmt(pendente)}</div></div>
   <button class="btn btn-p" onclick="openReceber()">+ Adicionar</button>
 </div>
 <div class="sec">
-  <div class="sec-h"><div class="sec-t">📥 A Receber</div></div>
+  <div class="sec-h"><div class="sec-t">📥 A Receber em ${mname(S.month)}</div></div>
   <div class="tw">
-  ${items.length?`<table><thead><tr><th>Nome/Origem</th><th>Descrição</th><th>Vencimento</th><th>Parcelas</th><th>Forma</th><th>Status</th><th style="text-align:right">Valor</th><th></th></tr></thead>
-  <tbody>${items.map((r,i)=>{
-    const hasParc=r.parcelas&&r.parcelas>1;
+  ${rows.length?`<table><thead><tr><th>Nome/Origem</th><th>Descrição</th><th>Parcela</th><th>Vencimento</th><th>Forma</th><th>Status</th><th style="text-align:right">Valor</th><th></th></tr></thead>
+  <tbody>${rows.map((row,ri)=>{
+    const{item,idx,mk,parcIdx,parc}=row;
+    const isParc=parcIdx!==null;
+    const valor=isParc?parc.valor:item.valor;
+    const status=isParc?parc.status:item.status;
+    const venc=isParc?parc.venc:item.venc;
     return`<tr>
-      <td class="nm">${r.nome||'—'}</td>
-      <td style="color:var(--tx3);font-size:.75rem">${r.desc||'—'}</td>
-      <td style="font-size:.75rem">${r.venc||'—'}</td>
-      <td>${hasParc?`<span class="parc-badge">${r.parcelas}x</span>`:'—'}</td>
-      <td>${r.forma?`<span class="badge bb" style="font-size:.65rem">${r.forma}</span>`:'—'}</td>
-      <td>${statusBadge(r.status,r.venc)}</td>
-      <td class="am cr">${fmt(r.valor)}</td>
-      <td style="display:flex;gap:4px">
-        ${r.status!=='pago'?`<button class="btn btn-green btn-sm" onclick="pagarReceber(${i})">✅ Receber</button>`:''}
-        ${hasParc?`<button class="btn-ic" onclick="verParcelas('receber',${i})">📋</button>`:''}
-        <button class="btn-ic" onclick="rmReceber(${i})">🗑</button>
+      <td class="nm">${item.nome||'—'}</td>
+      <td style="color:var(--tx3);font-size:.73rem">${item.desc||'—'}</td>
+      <td>${isParc?`<span class="parc-badge">${parc.num}/${item.parcelas}</span>`:'<span style="font-size:.72rem;color:var(--tx3)">À vista</span>'}</td>
+      <td style="font-size:.73rem">${venc||'—'}</td>
+      <td>${item.forma?`<span class="badge bb" style="font-size:.63rem">${item.forma}</span>`:'—'}</td>
+      <td>${statusBadge(status,venc)}</td>
+      <td class="am cr">${fmt(valor)}</td>
+      <td style="display:flex;gap:4px;flex-wrap:wrap">
+        ${status!=='pago'?`<button class="btn btn-green btn-sm" onclick="${isParc?`pagarParcela('receber',${idx},${parcIdx},'${mk}')`:`pagarReceber(${idx},'${mk}')`}">✅</button>`:''}
+        <button class="btn-ic" onclick="verParcelas('receber',${idx},'${mk}')">📋</button>
+        ${!isParc?`<button class="btn-ic" onclick="rmReceberGlobal('${mk}',${idx})">🗑</button>`:''}
       </td>
     </tr>`;
   }).join('')}</tbody></table>`
-  :'<div class="empty"><div class="empty-icon">📥</div><div class="empty-txt">Nenhuma conta a receber.</div></div>'}
+  :'<div class="empty"><div class="empty-icon">📥</div><div class="empty-txt">Nenhuma conta a receber neste mês.</div></div>'}
   </div>
 </div>`;
+}
+
+function rmReceberGlobal(mk,idx){
+  if(!confirm('Remover esta conta e todas as parcelas?'))return;
+  if(S.data[mk]&&S.data[mk].receber)S.data[mk].receber.splice(idx,1);
+  save();toast('Removido','err');go('receber');
+}
+function rmPagarGlobal(mk,idx){
+  if(!confirm('Remover esta conta e todas as parcelas?'))return;
+  if(S.data[mk]&&S.data[mk].pagar)S.data[mk].pagar.splice(idx,1);
+  save();toast('Removido','err');go('pagar');
+}
+function pagarContaGlobal(idx,mk){
+  const md=S.data[mk];if(!md)return;
+  const r=md.receber?md.receber[idx]:null;
+  if(r){r.status='pago';if(!md.entradas)md.entradas=[];md.entradas.push({id:uid(),nome:`[Recebido] ${r.nome}`,valor:r.valor,data:new Date().toISOString().slice(0,10),tipo:r.forma||'—'});save();toast(`${r.nome} recebido! ✅`);go('receber');return;}
+  const p=md.pagar?md.pagar[idx]:null;
+  if(p){p.status='pago';if(!md.trans)md.trans=[];md.trans.push({id:uid(),nome:`[Pago] ${p.nome}`,valor:p.valor,data:new Date().toISOString().slice(0,10),tipo:p.forma||'—',categoria:p.categoria||''});save();toast(`${p.nome} pago! ✅`);go('pagar');}
 }
 
 function openReceber(idx=null){
@@ -754,47 +828,57 @@ function openReceber(idx=null){
     save();toast(`${nome} cadastrado! ${parcelas>1?parcelas+'x parcelas geradas ✅':''}`);return true;
   });
 }
-function pagarReceber(i){
-  const r=gm().receber[i];
+function pagarReceber(idx,mk){
+  const md=mk&&S.data[mk]?S.data[mk]:gm();
+  const r=md.receber?md.receber[idx]:null;
+  if(!r)return;
   if(r.parcelas>1){toast('Use 📋 para gerenciar parcelas','warn');return;}
   r.status='pago';
-  // auto-lança nas entradas
-  gm().entradas.push({id:uid(),nome:`[Recebido] ${r.nome}`,valor:r.valor,data:new Date().toISOString().slice(0,10),tipo:r.forma||'—'});
-  save();toast(`${r.nome} recebido e lançado nas entradas! ✅`);go('receber');
+  if(!md.entradas)md.entradas=[];
+  md.entradas.push({id:uid(),nome:`[Recebido] ${r.nome}`,valor:r.valor,data:new Date().toISOString().slice(0,10),tipo:r.forma||'—'});
+  save();toast(`${r.nome} recebido! ✅`);go('receber');
 }
 function rmReceber(i){if(!confirm('Remover?'))return;gm().receber.splice(i,1);save();toast('Removido','err');go('receber');}
 
 // ══════════════ CONTAS A PAGAR ════════════════════
 function pPagar(){
-  const items=gm().pagar;
-  const total=sum(items.filter(p=>p.status!=='pago'),'valor');
+  const rows=getPagarDoMes();
+  const pendente=rows.reduce((s,r)=>{
+    const v=r.parc?r.parc.valor:r.item.valor;
+    const st=r.parc?r.parc.status:r.item.status;
+    return s+(st!=='pago'?v:0);
+  },0);
   return`
 <div class="ph" style="display:flex;align-items:flex-start;justify-content:space-between">
-  <div><div class="pt">📤 Contas a Pagar</div><div class="ps">${mname(S.month)} · ${items.length} item(s) · Pendente: ${fmt(total)}</div></div>
+  <div><div class="pt">📤 Contas a Pagar</div><div class="ps">${mname(S.month)} · ${rows.length} item(s) · Pendente: ${fmt(pendente)}</div></div>
   <button class="btn btn-p" onclick="openPagar()">+ Adicionar</button>
 </div>
 <div class="sec">
-  <div class="sec-h"><div class="sec-t">📤 A Pagar</div></div>
+  <div class="sec-h"><div class="sec-t">📤 A Pagar em ${mname(S.month)}</div></div>
   <div class="tw">
-  ${items.length?`<table><thead><tr><th>Nome/Empresa</th><th>Descrição</th><th>Vencimento</th><th>Parcelas</th><th>Forma</th><th>Status</th><th style="text-align:right">Valor</th><th></th></tr></thead>
-  <tbody>${items.map((p,i)=>{
-    const hasParc=p.parcelas&&p.parcelas>1;
+  ${rows.length?`<table><thead><tr><th>Nome/Empresa</th><th>Descrição</th><th>Parcela</th><th>Vencimento</th><th>Forma</th><th>Status</th><th style="text-align:right">Valor</th><th></th></tr></thead>
+  <tbody>${rows.map((row,ri)=>{
+    const{item,idx,mk,parcIdx,parc}=row;
+    const isParc=parcIdx!==null;
+    const valor=isParc?parc.valor:item.valor;
+    const status=isParc?parc.status:item.status;
+    const venc=isParc?parc.venc:item.venc;
     return`<tr>
-      <td class="nm">${p.nome||'—'}</td>
-      <td style="color:var(--tx3);font-size:.75rem">${p.desc||'—'}</td>
-      <td style="font-size:.75rem">${p.venc||'—'}</td>
-      <td>${hasParc?`<span class="parc-badge">${p.parcelas}x</span>`:'—'}</td>
-      <td>${p.forma?`<span class="badge bb" style="font-size:.65rem">${p.forma}</span>`:'—'}</td>
-      <td>${statusBadge(p.status,p.venc)}</td>
-      <td class="am db">${fmt(p.valor)}</td>
-      <td style="display:flex;gap:4px">
-        ${p.status!=='pago'?`<button class="btn btn-red btn-sm" onclick="pagarConta(${i})">✅ Pagar</button>`:''}
-        ${hasParc?`<button class="btn-ic" onclick="verParcelas('pagar',${i})">📋</button>`:''}
-        <button class="btn-ic" onclick="rmPagar(${i})">🗑</button>
+      <td class="nm">${item.nome||'—'}</td>
+      <td style="color:var(--tx3);font-size:.73rem">${item.desc||'—'}</td>
+      <td>${isParc?`<span class="parc-badge">${parc.num}/${item.parcelas}</span>`:'<span style="font-size:.72rem;color:var(--tx3)">À vista</span>'}</td>
+      <td style="font-size:.73rem">${venc||'—'}</td>
+      <td>${item.forma?`<span class="badge bb" style="font-size:.63rem">${item.forma}</span>`:'—'}</td>
+      <td>${statusBadge(status,venc)}</td>
+      <td class="am db">${fmt(valor)}</td>
+      <td style="display:flex;gap:4px;flex-wrap:wrap">
+        ${status!=='pago'?`<button class="btn btn-red btn-sm" onclick="${isParc?`pagarParcela('pagar',${idx},${parcIdx},'${mk}')`:`pagarContaGlobal(${idx},'${mk}')`}">✅</button>`:''}
+        <button class="btn-ic" onclick="verParcelas('pagar',${idx},'${mk}')">📋</button>
+        ${!isParc?`<button class="btn-ic" onclick="rmPagarGlobal('${mk}',${idx})">🗑</button>`:''}
       </td>
     </tr>`;
   }).join('')}</tbody></table>`
-  :'<div class="empty"><div class="empty-icon">📤</div><div class="empty-txt">Nenhuma conta a pagar.</div></div>'}
+  :'<div class="empty"><div class="empty-icon">📤</div><div class="empty-txt">Nenhuma conta a pagar neste mês.</div></div>'}
   </div>
 </div>`;
 }
@@ -847,12 +931,13 @@ function pagarConta(i){
 }
 function rmPagar(i){if(!confirm('Remover?'))return;gm().pagar.splice(i,1);save();toast('Removido','err');go('pagar');}
 
-function verParcelas(tipo,idx){
+function verParcelas(tipo,idx,itemMonth){
   // find item across ALL months
-  let item=null, itemMonth=null;
+  let item=null;
+  const useMk=itemMonth||null;
   for(const [mk2,md] of Object.entries(S.data)){
     const list=tipo==='receber'?(md.receber||[]):(md.pagar||[]);
-    if(list[idx]&&list[idx].parc){item=list[idx];itemMonth=mk2;break;}
+    if(useMk){if(mk2===useMk&&list[idx]){item=list[idx];break;}}else if(list[idx]&&list[idx].parc){item=list[idx];break;}
     // also search by position in current month
   }
   // fallback to current month
