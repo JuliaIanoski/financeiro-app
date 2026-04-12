@@ -8,11 +8,11 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import{getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import{getAuth,GoogleAuthProvider,signInWithPopup,signInWithRedirect,getRedirectResult,signOut,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import{getFirestore,doc,setDoc,onSnapshot}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 const cfg={apiKey:"AIzaSyDwPMLV_gTtjTL4QkOAT5CX4q54V2u6sFA",authDomain:"app-financeiro-9c90c.firebaseapp.com",projectId:"app-financeiro-9c90c",storageBucket:"app-financeiro-9c90c.firebasestorage.app",messagingSenderId:"424182298863",appId:"1:424182298863:web:4ecac92edc2d0fbd05431a"};
 const fb=initializeApp(cfg);const auth=getAuth(fb);const db=getFirestore(fb);
-window._fb={auth,db,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged,doc,setDoc,onSnapshot};
+window._fb={auth,db,GoogleAuthProvider,signInWithPopup,signInWithRedirect,getRedirectResult,signOut,onAuthStateChanged,doc,setDoc,onSnapshot};
 </script>
 <style>
 :root{
@@ -479,7 +479,14 @@ function initFb(){
     });
   });
 }
-function signInG(){waitFb(()=>{const{auth,GoogleAuthProvider,signInWithPopup}=window._fb;signInWithPopup(auth,new GoogleAuthProvider()).catch(e=>toast('Erro: '+e.message,'err'));});}
+function signInG(){
+  waitFb(()=>{
+    const{auth,GoogleAuthProvider,signInWithRedirect}=window._fb;
+    const provider=new GoogleAuthProvider();
+    provider.setCustomParameters({prompt:'select_account'});
+    signInWithRedirect(auth,provider).catch(err=>toast('Erro: '+err.message,'err'));
+  });
+}
 function doSignOut(){if(!confirm('Sair?'))return;waitFb(()=>window._fb.signOut(window._fb.auth));}
 function setSyncDot(s){const d=document.getElementById('sync-dot');if(!d)return;d.classList.toggle('syncing',s==='syncing');d.style.background=s==='ok'?'var(--green)':s==='syncing'?'var(--yellow)':'var(--red)';}
 function startSync(){
@@ -1600,6 +1607,21 @@ document.addEventListener('keydown',e=>{
 
 // ══════════════ INIT ════════════════════════════
 load();render();initFb();
+// Handle redirect result (when returning from Google login page)
+waitFb(()=>{
+  const{auth,getRedirectResult}=window._fb;
+  getRedirectResult(auth).then(result=>{
+    if(result&&result.user){
+      console.log('Login via redirect ok:',result.user.email);
+      // onAuthStateChanged will fire automatically
+    }
+  }).catch(e=>{
+    if(e.code&&e.code!=='auth/no-current-user'&&e.code!=='auth/null-user'){
+      console.error('Redirect result err:',e.code,e.message);
+      toast('Erro no login: '+e.code,'err');
+    }
+  });
+});
 </script>
 </body>
 </html>
