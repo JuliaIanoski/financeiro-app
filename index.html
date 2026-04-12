@@ -738,18 +738,20 @@ function openReceber(idx=null){
     if(!nome||!valor){toast('Preencha nome e valor','err');return false;}
     const parcelas=parseInt(document.getElementById('m-parc').value)||1;
     const venc=document.getElementById('m-venc').value;
-    const item={id:uid(),nome,valor,desc:document.getElementById('m-desc').value.trim(),venc,parcelas,forma:document.getElementById('m-forma').value,obs:document.getElementById('m-obs').value.trim(),status:'pendente'};
+    const itemId=uid();
+    const item={id:itemId,nome,valor,desc:document.getElementById('m-desc').value.trim(),venc,parcelas,forma:document.getElementById('m-forma').value,obs:document.getElementById('m-obs').value.trim(),status:'pendente'};
     if(parcelas>1){
       item.parc=[];
       const vBase=new Date(venc+'T00:00:00');
-      const vPart=valor/parcelas;
+      const vPart=+(valor/parcelas).toFixed(2);
       for(let p=0;p<parcelas;p++){
         const d=new Date(vBase);d.setMonth(d.getMonth()+p);
-        item.parc.push({num:p+1,valor:vPart,venc:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,status:'pendente'});
+        const pVenc=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        item.parc.push({num:p+1,valor:vPart,venc:pVenc,status:'pendente'});
       }
     }
     if(idx!==null)gm().receber[idx]=item;else gm().receber.push(item);
-    save();toast(`${nome} cadastrado!`);return true;
+    save();toast(`${nome} cadastrado! ${parcelas>1?parcelas+'x parcelas geradas ✅':''}`);return true;
   });
 }
 function pagarReceber(i){
@@ -820,18 +822,20 @@ function openPagar(idx=null){
     if(!nome||!valor){toast('Preencha nome e valor','err');return false;}
     const parcelas=parseInt(document.getElementById('m-parc').value)||1;
     const venc=document.getElementById('m-venc').value;
-    const item={id:uid(),nome,valor,desc:document.getElementById('m-desc').value.trim(),venc,parcelas,forma:document.getElementById('m-forma').value,categoria:document.getElementById('m-c').value,obs:document.getElementById('m-obs').value.trim(),status:'pendente'};
+    const itemId2=uid();
+    const item={id:itemId2,nome,valor,desc:document.getElementById('m-desc').value.trim(),venc,parcelas,forma:document.getElementById('m-forma').value,categoria:document.getElementById('m-c').value,obs:document.getElementById('m-obs').value.trim(),status:'pendente'};
     if(parcelas>1){
       item.parc=[];
       const vBase=new Date(venc+'T00:00:00');
-      const vPart=valor/parcelas;
+      const vPart=+(valor/parcelas).toFixed(2);
       for(let p=0;p<parcelas;p++){
         const d=new Date(vBase);d.setMonth(d.getMonth()+p);
-        item.parc.push({num:p+1,valor:vPart,venc:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,status:'pendente'});
+        const pVenc=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        item.parc.push({num:p+1,valor:vPart,venc:pVenc,status:'pendente'});
       }
     }
     if(idx!==null)gm().pagar[idx]=item;else gm().pagar.push(item);
-    save();toast(`${nome} cadastrado!`);return true;
+    save();toast(`${nome} cadastrado! ${parcelas>1?parcelas+'x parcelas geradas ✅':''}`);return true;
   });
 }
 function pagarConta(i){
@@ -844,48 +848,104 @@ function pagarConta(i){
 function rmPagar(i){if(!confirm('Remover?'))return;gm().pagar.splice(i,1);save();toast('Removido','err');go('pagar');}
 
 function verParcelas(tipo,idx){
-  const list=tipo==='receber'?gm().receber:gm().pagar;
-  const item=list[idx];
+  // find item across ALL months
+  let item=null, itemMonth=null;
+  for(const [mk2,md] of Object.entries(S.data)){
+    const list=tipo==='receber'?(md.receber||[]):(md.pagar||[]);
+    if(list[idx]&&list[idx].parc){item=list[idx];itemMonth=mk2;break;}
+    // also search by position in current month
+  }
+  // fallback to current month
+  if(!item){const list=tipo==='receber'?gm().receber:gm().pagar;item=list[idx];itemMonth=S.month;}
+  if(!item){toast('Item não encontrado','err');return;}
   const parcs=item.parc||[];
-  openMd(`📋 Parcelas — ${item.nome}`,`
-    <table style="width:100%;border-collapse:collapse;font-size:.82rem">
+  const col=tipo==='receber'?'var(--green)':'var(--red)';
+  openMd(`📋 Parcelas — ${item.nome} (${item.parcelas}x)`,`
+    <div style="font-size:.75rem;color:var(--tx3);margin-bottom:12px">
+      Valor total: <strong style="color:var(--tx);font-family:var(--mo)">${fmt(item.valor)}</strong> · 
+      Cada parcela: <strong style="color:${col};font-family:var(--mo)">${fmt(item.valor/item.parcelas)}</strong>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:.8rem">
       <thead><tr>
-        <th style="padding:8px 12px;color:var(--tx3);border-bottom:1px solid var(--bd);font-size:.65rem;text-transform:uppercase">Parcela</th>
-        <th style="padding:8px 12px;color:var(--tx3);border-bottom:1px solid var(--bd);font-size:.65rem;text-transform:uppercase">Vencimento</th>
-        <th style="padding:8px 12px;color:var(--tx3);border-bottom:1px solid var(--bd);font-size:.65rem;text-transform:uppercase;text-align:right">Valor</th>
-        <th style="padding:8px 12px;color:var(--tx3);border-bottom:1px solid var(--bd);font-size:.65rem;text-transform:uppercase">Status</th>
-        <th></th>
+        <th style="padding:7px 10px;color:var(--tx3);border-bottom:1px solid var(--bd);font-size:.62rem;text-transform:uppercase">Parcela</th>
+        <th style="padding:7px 10px;color:var(--tx3);border-bottom:1px solid var(--bd);font-size:.62rem;text-transform:uppercase">Mês</th>
+        <th style="padding:7px 10px;color:var(--tx3);border-bottom:1px solid var(--bd);font-size:.62rem;text-transform:uppercase">Vencimento</th>
+        <th style="padding:7px 10px;color:var(--tx3);border-bottom:1px solid var(--bd);font-size:.62rem;text-transform:uppercase;text-align:right">Valor</th>
+        <th style="padding:7px 10px;color:var(--tx3);border-bottom:1px solid var(--bd);font-size:.62rem;text-transform:uppercase">Status</th>
+        <th style="padding:7px 10px;color:var(--tx3);border-bottom:1px solid var(--bd);font-size:.62rem;text-transform:uppercase">Ações</th>
       </tr></thead>
-      <tbody>${parcs.map((p,pi)=>`<tr style="border-bottom:1px solid rgba(42,48,80,.4)">
-        <td style="padding:8px 12px">${p.num}ª</td>
-        <td style="padding:8px 12px;font-size:.75rem">${p.venc||'—'}</td>
-        <td style="padding:8px 12px;text-align:right;font-family:var(--mo);color:${tipo==='receber'?'var(--green)':'var(--red)'}">${fmt(p.valor)}</td>
-        <td style="padding:8px 12px">${statusBadge(p.status,p.venc)}</td>
-        <td style="padding:8px 12px">${p.status!=='pago'?`<button class="btn btn-${tipo==='receber'?'green':'red'} btn-sm" onclick="pagarParcela('${tipo}',${idx},${pi})">✅</button>`:''}</td>
+      <tbody>${parcs.map((p,pi)=>`<tr style="border-bottom:1px solid rgba(42,48,80,.35)">
+        <td style="padding:7px 10px;font-weight:600">${p.num}ª</td>
+        <td style="padding:7px 10px;font-size:.73rem;color:var(--tx2)">${p.venc?mname(p.venc.slice(0,7)):'—'}</td>
+        <td style="padding:7px 10px;font-size:.73rem">${p.venc||'—'}</td>
+        <td style="padding:7px 10px;text-align:right;font-family:var(--mo);color:${col}">${fmt(p.valor)}</td>
+        <td style="padding:7px 10px">${statusBadge(p.status,p.venc)}</td>
+        <td style="padding:7px 10px">
+          <div style="display:flex;gap:5px">
+            ${p.status!=='pago'?`<button class="btn btn-${tipo==='receber'?'green':'red'} btn-sm" onclick="pagarParcela('${tipo}',${idx},${pi},'${itemMonth}')">✅</button>`:''}
+            <button class="btn btn-g btn-sm" onclick="editParcela('${tipo}',${idx},${pi},'${itemMonth}')">✏️</button>
+          </div>
+        </td>
       </tr>`).join('')}</tbody>
     </table>`,
   null,true);
 }
-function pagarParcela(tipo,idx,pi){
-  const list=tipo==='receber'?gm().receber:gm().pagar;
+function pagarParcela(tipo,idx,pi,itemMonth){
+  // find item in the right month
+  const mKey=itemMonth||S.month;
+  const md=S.data[mKey];
+  if(!md){toast('Mês não encontrado','err');return;}
+  const list=tipo==='receber'?(md.receber||[]):(md.pagar||[]);
   const item=list[idx];
+  if(!item){toast('Item não encontrado','err');return;}
   const parc=item.parc[pi];
   parc.status='pago';
+  // launch in the parcela's own month
   const mPagoKey=parc.venc?parc.venc.slice(0,7):S.month;
+  if(!S.data[mPagoKey])S.data[mPagoKey]={trans:[],entradas:[],receber:[],pagar:[]};
   const mPago=S.data[mPagoKey];
-  if(mPago){
-    if(tipo==='receber'){
-      if(!mPago.entradas)mPago.entradas=[];
-      mPago.entradas.push({id:uid(),nome:`[Parcela ${parc.num}/${item.parcelas}] ${item.nome}`,valor:parc.valor,data:parc.venc||new Date().toISOString().slice(0,10),tipo:item.forma||'—'});
-    }else{
-      if(!mPago.trans)mPago.trans=[];
-      mPago.trans.push({id:uid(),nome:`[Parcela ${parc.num}/${item.parcelas}] ${item.nome}`,valor:parc.valor,data:parc.venc||new Date().toISOString().slice(0,10),tipo:item.forma||'—',categoria:item.categoria||''});
-    }
+  if(tipo==='receber'){
+    if(!mPago.entradas)mPago.entradas=[];
+    mPago.entradas.push({id:uid(),nome:`[${parc.num}/${item.parcelas}] ${item.nome}`,valor:parc.valor,data:parc.venc||new Date().toISOString().slice(0,10),tipo:item.forma||'—'});
+  }else{
+    if(!mPago.trans)mPago.trans=[];
+    mPago.trans.push({id:uid(),nome:`[${parc.num}/${item.parcelas}] ${item.nome}`,valor:parc.valor,data:parc.venc||new Date().toISOString().slice(0,10),tipo:item.forma||'—',categoria:item.categoria||''});
   }
-  // check if all paid
   if(item.parc.every(p=>p.status==='pago'))item.status='pago';
-  save();toast(`Parcela ${parc.num} de ${item.parcelas} paga! ✅`);
+  save();toast(`Parcela ${parc.num}/${item.parcelas} paga! ✅`);
   closeM();setTimeout(()=>go(tipo==='receber'?'receber':'pagar'),100);
+}
+
+function editParcela(tipo,idx,pi,itemMonth){
+  const mKey=itemMonth||S.month;
+  const md=S.data[mKey];
+  const list=tipo==='receber'?(md?.receber||[]):(md?.pagar||[]);
+  const item=list[idx];
+  if(!item){toast('Item não encontrado','err');return;}
+  const parc=item.parc[pi];
+  const col=tipo==='receber'?'var(--green)':'var(--red)';
+  openMd(`✏️ Editar Parcela ${parc.num}/${item.parcelas} — ${item.nome}`,`
+    <div style="background:var(--sf2);border-radius:var(--rs);padding:10px 14px;margin-bottom:14px;font-size:.78rem;color:var(--tx3)">
+      Mês: <strong style="color:var(--tx)">${mname(parc.venc?parc.venc.slice(0,7):S.month)}</strong> · 
+      Vencimento: <strong style="color:var(--tx)">${parc.venc||'—'}</strong>
+    </div>
+    <div class="fg">
+      <div class="fi s2"><label>Valor da Parcela (R$)</label>
+        <input type="text" id="ep-v" value="${fmtBRL(parc.valor)}" class="brl"/>
+      </div>
+      <div class="fi s2"><label>Data de Vencimento</label>
+        <input type="date" id="ep-d" value="${parc.venc||''}"/>
+      </div>
+    </div>`,
+  ()=>{
+    const novoValor=parseBRL(document.getElementById('ep-v').value||'0');
+    const novaData=document.getElementById('ep-d').value;
+    if(!novoValor||novoValor<=0){toast('Valor inválido','err');return false;}
+    parc.valor=novoValor;
+    if(novaData)parc.venc=novaData;
+    save();toast(`Parcela ${parc.num} atualizada! R$ ${fmtBRL(novoValor)}`);
+    return true;
+  });
 }
 
 // ══════════════ CATEGORIAS ════════════════════════
@@ -905,8 +965,9 @@ ${macros.map((mac,mi)=>`
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <span style="font-size:.72rem;color:var(--tx3)">Orçamento do grupo:</span>
       <input type="text" placeholder="Sem limite" value="${S.orcMacro[mac.id]?fmtBRL(S.orcMacro[mac.id]):''}"
-        onchange="S.orcMacro['${mac.id}']=parseBRL(this.value);save()"
+        onchange="S.orcMacro['${mac.id}']=parseBRL(this.value);save();go('cats')"
         style="background:var(--sf3);border:1px solid var(--bd);border-radius:6px;padding:4px 9px;font-size:.76rem;color:var(--tx);width:110px;font-family:var(--mo)" class="brl"/>
+      ${(()=>{const macOrc=S.orcMacro[mac.id]||0;if(!macOrc)return'';const distribMicro=mac.cats.reduce((s,c)=>s+(S.orcMicro[c]||0),0);const disp=macOrc-distribMicro;return`<span style="font-size:.7rem;color:${disp<0?'var(--red)':disp===0?'var(--yellow)':'var(--green)'}">Distribuído: R$ ${fmtBRL(distribMicro)} · Livre: R$ ${fmtBRL(disp)}</span>`})()}
     </div>
   </div>
   <div class="tw"><table>
@@ -924,7 +985,7 @@ ${macros.map((mac,mi)=>`
         <td class="nm">${cat}</td>
         <td style="text-align:right">
           <input type="text" placeholder="Sem limite" value="${o?fmtBRL(o):''}"
-            onchange="S.orcMicro['${cat}']=parseBRL(this.value);save()"
+            onchange="setOrcMicro('${mac.id}','${cat}',this.value,this)"
             style="background:var(--sf3);border:1px solid var(--bd);border-radius:6px;padding:3px 8px;font-size:.74rem;color:var(--tx2);width:100px;text-align:right;font-family:var(--mo)" class="brl"/>
         </td>
         <td class="am" style="color:${v>0?'var(--red)':'var(--tx3)'}">${v>0?fmt(v):'—'}</td>
@@ -943,6 +1004,27 @@ ${macros.map((mac,mi)=>`
     }).join('')}</tbody>
   </table></div>
 </div>`).join('')}`;
+}
+
+// ── ORÇAMENTO MICRO com validação ──────────────────
+function setOrcMicro(macId, cat, val, el){
+  const v = parseBRL(val);
+  const macros = getMacros();
+  const mac = macros.find(m=>m.id===macId);
+  const macOrc = S.orcMacro[macId]||0;
+  if(macOrc>0){
+    // soma de todos os micros desse macro (exceto o atual)
+    const outrosMicros = (mac?.cats||[]).filter(c=>c!==cat).reduce((s,c)=>s+(S.orcMicro[c]||0),0);
+    const disponivel = macOrc - outrosMicros;
+    if(v > disponivel){
+      toast(`⚠️ Limite! O macro ${mac?.nome} tem R$ ${fmtBRL(macOrc)} e já tem R$ ${fmtBRL(outrosMicros)} distribuído. Disponível: R$ ${fmtBRL(disponivel)}`,'warn');
+      if(el) el.value = disponivel>0?fmtBRL(disponivel):'';
+      S.orcMicro[cat] = disponivel>0?disponivel:0;
+      save(); return;
+    }
+  }
+  if(!v||v===0) delete S.orcMicro[cat]; else S.orcMicro[cat]=v;
+  save();
 }
 
 // ── CAT MANAGEMENT ────────────────────────────────
