@@ -593,7 +593,7 @@ ${mt.map(item=>{
     ${recent.length?`<table><thead><tr><th>Nome</th><th>Categoria</th><th style="text-align:right">Valor</th></tr></thead>
     <tbody>${recent.map(g=>`<tr>
       <td class="nm" style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${g.nome||'—'}</td>
-      <td>${g.categoria?`<span class="badge bb" style="font-size:.62rem">${g.categoria}</span>`:'—'}</td>
+      <td>${g.categoria?`<span class="badge bb" style="font-size:.62rem">${g.categoria}</span>`:`<span style="font-size:.65rem;color:var(--tx3);font-style:italic">Sem cat.</span>`}</td>
       <td class="am db">${fmt(g.valor)}</td>
     </tr>`).join('')}</tbody></table>`
     :'<div class="empty"><div class="empty-icon">📭</div><div class="empty-txt">Nenhum lançamento</div></div>'}
@@ -638,7 +638,7 @@ function pTrans(){
   ${g.length?`<table><thead><tr><th>Nome</th><th>Categoria</th><th>Tipo</th><th>Data</th><th style="text-align:right">Valor</th><th></th></tr></thead>
   <tbody>${g.map((x,i)=>`<tr>
     <td class="nm">${x.nome||'—'}</td>
-    <td>${x.categoria?`<span class="badge bb">${x.categoria}</span>`:'—'}</td>
+    <td>${x.categoria?`<span class="badge bb">${x.categoria}</span>`:`<span style="font-size:.68rem;color:var(--tx3);font-style:italic">Sem categoria</span>`}</td>
     <td>${x.tipo?tbadge(x.tipo):'—'}</td>
     <td style="color:var(--tx3);font-size:.73rem">${x.data||'—'}</td>
     <td class="am db">${fmt(x.valor)}</td>
@@ -969,6 +969,7 @@ function verParcelas(tipo,idx,itemMonth){
           <div style="display:flex;gap:5px">
             ${p.status!=='pago'?`<button class="btn btn-${tipo==='receber'?'green':'red'} btn-sm" onclick="pagarParcela('${tipo}',${idx},${pi},'${itemMonth}')">✅</button>`:''}
             <button class="btn btn-g btn-sm" onclick="editParcela('${tipo}',${idx},${pi},'${itemMonth}')">✏️</button>
+            ${p.status!=='pago'?`<button class="btn-ic" title="Excluir parcela" onclick="delParcela('${tipo}',${idx},${pi},'${itemMonth}')">🗑</button>`:'<span style=\"font-size:.65rem;color:var(--green)\">pago</span>'}
           </div>
         </td>
       </tr>`).join('')}</tbody>
@@ -1031,6 +1032,24 @@ function editParcela(tipo,idx,pi,itemMonth){
     save();toast(`Parcela ${parc.num} atualizada! R$ ${fmtBRL(novoValor)}`);
     return true;
   });
+}
+
+function delParcela(tipo,idx,pi,itemMonth){
+  if(!confirm('Excluir esta parcela?'))return;
+  const mKey=itemMonth||S.month;
+  const md=S.data[mKey];
+  if(!md){toast('Mês não encontrado','err');return;}
+  const list=tipo==='receber'?(md.receber||[]):(md.pagar||[]);
+  const item=list[idx];
+  if(!item||!item.parc){toast('Item não encontrado','err');return;}
+  item.parc.splice(pi,1);
+  // renumber remaining parcelas
+  item.parc.forEach((p,i)=>p.num=i+1);
+  item.parcelas=item.parc.length;
+  // if no parcelas left, treat as simple item
+  if(item.parc.length===0){delete item.parc;item.parcelas=1;}
+  save();toast('Parcela removida','err');
+  closeM();setTimeout(()=>go(tipo==='receber'?'receber':'pagar'),100);
 }
 
 // ══════════════ CATEGORIAS ════════════════════════
@@ -1146,7 +1165,7 @@ function openRenameCat(oldName){
     const macros=getMacros();
     if(macros.flatMap(m=>m.cats).includes(newName)&&newName!==oldName){toast('Já existe','err');return false;}
     macros.forEach(m=>{const i=m.cats.indexOf(oldName);if(i>-1)m.cats[i]=newName;});
-    Object.values(S.data).forEach(d=>['trans','pagar'].forEach(l=>(d[l]||[]).forEach(item=>{if(item.categoria===oldName)item.categoria=newName;})));
+    Object.values(S.data).forEach(d=>['trans','pagar','receber'].forEach(l=>(d[l]||[]).forEach(item=>{if(item.categoria===oldName)item.categoria=newName;})));
     if(S.orcMicro[oldName]!==undefined){S.orcMicro[newName]=S.orcMicro[oldName];delete S.orcMicro[oldName];}
     save();toast(`Renomeada para "${newName}"!`);go('cats');return true;
   });
@@ -1176,7 +1195,7 @@ function delCat(cat,macId){
   const macros=getMacros();
   const mac=macros.find(m=>m.id===macId);
   if(mac)mac.cats=mac.cats.filter(c=>c!==cat);
-  Object.values(S.data).forEach(d=>['trans','pagar'].forEach(l=>(d[l]||[]).forEach(item=>{if(item.categoria===cat)item.categoria='';})));
+  Object.values(S.data).forEach(d=>['trans','pagar','receber'].forEach(l=>(d[l]||[]).forEach(item=>{if(item.categoria===cat)item.categoria='';})));
   delete S.orcMicro[cat];
   save();toast('"'+cat+'" excluída','err');go('cats');
 }
