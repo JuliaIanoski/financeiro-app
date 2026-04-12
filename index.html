@@ -301,7 +301,7 @@ textarea{resize:vertical;min-height:60px}
 
 <script>
 // ══════════════ CONSTANTS ══════════════════════════
-const MACROS=[
+const DEF_MACROS=[
   {id:'ess',nome:'Essenciais',emoji:'🏠',cor:'var(--ess)',hex:'#5b8dee',
    cats:['Moradia','Contas','Mercado','Transporte']},
   {id:'laz',nome:'Lazer',emoji:'🎉',cor:'var(--laz)',hex:'#ffd166',
@@ -309,7 +309,12 @@ const MACROS=[
   {id:'inv',nome:'Investimentos',emoji:'📈',cor:'var(--inv)',hex:'#3dd68c',
    cats:['Reserva de emergência','Investimentos','Dívidas']},
 ];
-const ALL_CATS=MACROS.flatMap(m=>m.cats);
+// Dynamic getters — always read from state
+const getMacros=()=>S.macros&&S.macros.length?S.macros:DEF_MACROS.map(m=>({...m,cats:[...m.cats]}));
+const getAllCats=()=>getMacros().flatMap(m=>m.cats);
+// Legacy aliases kept for compat
+const getMacro=id=>getMacros().find(m=>m.id===id);
+const getCatMacro=cat=>getMacros().find(m=>m.cats.includes(cat));
 const TIPOS_PAG=['Débito','PIX','Dinheiro'];
 const DEF_CARDS=[{id:'ca1',nome:'Crédito 1',cor:'#b388ff'},{id:'ca2',nome:'Crédito 2',cor:'#5b8dee'},{id:'ca3',nome:'Crédito 3',cor:'#4dd0e1'},{id:'ca4',nome:'Crédito 4',cor:'#3dd68c'}];
 const CC=['#5b8dee','#f06292','#3dd68c','#ffd166','#b388ff','#4dd0e1','#ff8a65','#a5d6a7','#ce93d8','#80deea','#ffcc02','#ef9a9a'];
@@ -320,6 +325,7 @@ let S={
   month:new Date().toISOString().slice(0,7),
   data:{}, // {YYYY-MM:{trans:[],entradas:[],receber:[],pagar:[]}}
   cards:[...DEF_CARDS.map(c=>({...c}))],
+  macros:[...DEF_MACROS.map(m=>({...m,cats:[...m.cats]}))],
   orcMacro:{}, // {ess:{},laz:{},inv:{}} orcamento macro
   orcMicro:{}, // {Moradia:0, ...}
   metas:[],
@@ -328,8 +334,8 @@ let S={
 
 const getCards=()=>S.cards&&S.cards.length?S.cards:DEF_CARDS;
 const getTipos=()=>[...TIPOS_PAG,...getCards().map(c=>c.nome)];
-const getMacro=id=>MACROS.find(m=>m.id===id);
-const getCatMacro=cat=>MACROS.find(m=>m.cats.includes(cat));
+const getMacro=id=>getMacros().find(m=>m.id===id);
+const getCatMacro=cat=>getMacros().find(m=>m.cats.includes(cat));
 
 function mk(m){return m||S.month;}
 function gm(m){
@@ -359,6 +365,7 @@ function load(){
       S.orcMacro=p.orcMacro||{};
       S.orcMicro=p.orcMicro||{};
       S.metas=p.metas||[];
+      S.macros=p.macros||DEF_MACROS.map(m=>({...m,cats:[...m.cats]}));
       S._ts=p._ts||0;
     }
   }catch(e){}
@@ -438,11 +445,11 @@ function mk2(dateStr){if(!dateStr)return'';return dateStr.slice(0,7);}
 
 function catTotals(m){
   const d=gm(m);
-  return ALL_CATS.map(cat=>({cat,v:sumCat(d.trans,cat)}));
+  return getAllCats().map(cat=>({cat,v:sumCat(d.trans,cat)}));
 }
 function macroTotals(m){
   const ct={};catTotals(m).forEach(x=>ct[x.cat]=x.v);
-  return MACROS.map(mac=>{
+  return getMacros().map(mac=>{
     const real=mac.cats.reduce((s,c)=>s+(ct[c]||0),0);
     const orc=S.orcMacro[mac.id]||0;
     return{mac,real,orc,saldo:orc-real,over:orc>0&&real>orc};
@@ -485,7 +492,7 @@ function startSync(){
       if(r&&r._ts&&r._ts>S._ts){
         S.data=r.data||S.data;S.cards=r.cards||S.cards;
         S.orcMacro=r.orcMacro||S.orcMacro;S.orcMicro=r.orcMicro||S.orcMicro;
-        S.metas=r.metas||S.metas;S._ts=r._ts;
+        S.metas=r.metas||S.metas;S.macros=r.macros||S.macros;S._ts=r._ts;
         save();render();
       }
     }
@@ -498,7 +505,7 @@ function cloudSave(){
   const{db,doc,setDoc}=window._fb;
   S._ts=Date.now();
   setDoc(doc(db,'users',currentUser.uid,'data','state'),{
-    data:S.data,cards:S.cards,orcMacro:S.orcMacro,orcMicro:S.orcMicro,metas:S.metas,_ts:S._ts
+    data:S.data,cards:S.cards,orcMacro:S.orcMacro,orcMicro:S.orcMicro,metas:S.metas,macros:S.macros,_ts:S._ts
   }).then(()=>setSyncDot('ok')).catch(e=>{setSyncDot('err');console.error(e);});
 }
 
@@ -603,7 +610,7 @@ function initDashChart(){
 // ══════════════ TRANSAÇÕES ════════════════════════
 function pTrans(){
   const g=gm().trans;
-  const catOpts=ALL_CATS.map(c=>`<option>${c}</option>`).join('');
+  const catOpts=getAllCats().map(c=>`<option>${c}</option>`).join('');
   const tOpts=getTipos().map(t=>`<option>${t}</option>`).join('');
   return`
 <div class="ph" style="display:flex;align-items:flex-start;justify-content:space-between">
@@ -640,7 +647,7 @@ function pTrans(){
 function openTrans(idx=null){
   const today=new Date().toISOString().slice(0,10);
   const x=idx!==null?gm().trans[idx]:{};
-  const catOpts=ALL_CATS.map(c=>`<option ${x.categoria===c?'selected':''}>${c}</option>`).join('');
+  const catOpts=getAllCats().map(c=>`<option ${x.categoria===c?'selected':''}>${c}</option>`).join('');
   const tOpts=getTipos().map(t=>`<option ${x.tipo===t?'selected':''}>${t}</option>`).join('');
   openMd(`${idx!==null?'✏️ Editar':'🛒 Nova'} Transação`,`
     <div class="fg">
@@ -788,7 +795,7 @@ function pPagar(){
 function openPagar(idx=null){
   const today=new Date().toISOString().slice(0,10);
   const x=idx!==null?gm().pagar[idx]:{};
-  const catOpts=ALL_CATS.map(c=>`<option ${x.categoria===c?'selected':''}>${c}</option>`).join('');
+  const catOpts=getAllCats().map(c=>`<option ${x.categoria===c?'selected':''}>${c}</option>`).join('');
   openMd('📤 Conta a Pagar',`
     <div class="fg">
       <div class="fi s2"><label>Nome / Empresa</label><input type="text" id="m-n" value="${x.nome||''}" placeholder="ex: Aluguel, Netflix, João"/></div>
@@ -879,47 +886,128 @@ function pagarParcela(tipo,idx,pi){
 // ══════════════ CATEGORIAS ════════════════════════
 function pCats(){
   const tots=catTotals();
+  const macros=getMacros();
+  const allCats=getAllCats();
   return`
-<div class="ph"><div class="pt">🗂️ Categorias</div><div class="ps">Categorias fixas com orçamento configurável</div></div>
-${MACROS.map(mac=>`
+<div class="ph" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px">
+  <div><div class="pt">🗂️ Categorias</div><div class="ps">${allCats.length} categoria(s) em ${macros.length} grupo(s)</div></div>
+  <button class="btn btn-p" onclick="openAddCat()">+ Nova Categoria</button>
+</div>
+${macros.map((mac,mi)=>`
 <div class="sec">
   <div class="sec-h" style="background:linear-gradient(135deg,${mac.hex}12,${mac.hex}06)">
     <div class="sec-t" style="color:${mac.cor}">${mac.emoji} ${mac.nome}</div>
-    <div style="display:flex;align-items:center;gap:10px">
-      <span style="font-size:.75rem;color:var(--tx3)">Orçamento do grupo:</span>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:.72rem;color:var(--tx3)">Orçamento do grupo:</span>
       <input type="text" placeholder="Sem limite" value="${S.orcMacro[mac.id]?fmtBRL(S.orcMacro[mac.id]):''}"
         onchange="S.orcMacro['${mac.id}']=parseBRL(this.value);save()"
-        style="background:var(--sf3);border:1px solid var(--bd);border-radius:6px;padding:4px 9px;font-size:.78rem;color:var(--tx);width:120px;font-family:var(--mo)" class="brl"/>
+        style="background:var(--sf3);border:1px solid var(--bd);border-radius:6px;padding:4px 9px;font-size:.76rem;color:var(--tx);width:110px;font-family:var(--mo)" class="brl"/>
     </div>
   </div>
   <div class="tw"><table>
-    <thead><tr><th>Categoria</th><th style="text-align:right">Orçamento</th><th style="text-align:right">Realizado</th><th style="text-align:right">Restante</th><th style="text-align:center;width:70px">%</th></tr></thead>
-    <tbody>${mac.cats.map(cat=>{
+    <thead><tr>
+      <th>Categoria</th><th style="text-align:right">Orçamento</th><th style="text-align:right">Realizado</th>
+      <th style="text-align:right">Restante</th><th style="text-align:center;width:65px">%</th><th style="text-align:center;width:100px">Ações</th>
+    </tr></thead>
+    <tbody>${mac.cats.map((cat)=>{
       const v=tots.find(t=>t.cat===cat)?.v||0;
       const o=S.orcMicro[cat]||0;
       const rest=o-v;const pct=o>0?Math.min(v/o*100,100):0;
-      const over=o>0&&v>o;
-      const bc=over?'var(--red)':pct>80?'var(--yellow)':'var(--green)';
+      const over=o>0&&v>o;const bc=over?'var(--red)':pct>80?'var(--yellow)':'var(--green)';
+      const esc=cat.replace(/'/g,"\'");const macEsc=mac.id.replace(/'/g,"\'");
       return`<tr>
         <td class="nm">${cat}</td>
         <td style="text-align:right">
           <input type="text" placeholder="Sem limite" value="${o?fmtBRL(o):''}"
             onchange="S.orcMicro['${cat}']=parseBRL(this.value);save()"
-            style="background:var(--sf3);border:1px solid var(--bd);border-radius:6px;padding:3px 8px;font-size:.76rem;color:var(--tx2);width:105px;text-align:right;font-family:var(--mo)" class="brl"/>
+            style="background:var(--sf3);border:1px solid var(--bd);border-radius:6px;padding:3px 8px;font-size:.74rem;color:var(--tx2);width:100px;text-align:right;font-family:var(--mo)" class="brl"/>
         </td>
         <td class="am" style="color:${v>0?'var(--red)':'var(--tx3)'}">${v>0?fmt(v):'—'}</td>
         <td class="am" style="color:${o>0?(over?'var(--red)':'var(--green)'):'var(--tx3)'}">
-          ${o>0?fmt(rest):'—'}${over?'<span class="alert-badge" style="margin-left:6px">⚠️</span>':''}
+          ${o>0?fmt(rest):'—'}${over?'<span class="alert-badge" style="margin-left:5px">⚠️</span>':''}
         </td>
         <td style="text-align:center">
-          ${o>0?`<div><div style="font-size:.72rem;font-family:var(--mo);color:${bc};text-align:center">${pct.toFixed(0)}%</div><div class="pb"><div class="pf" style="width:${pct}%;background:${bc}"></div></div></div>`:'—'}
+          ${o>0?`<div style="font-size:.7rem;font-family:var(--mo);color:${bc};margin-bottom:2px">${pct.toFixed(0)}%</div><div class="pb"><div class="pf" style="width:${pct}%;background:${bc}"></div></div>`:'—'}
         </td>
+        <td><div style="display:flex;gap:4px;justify-content:center">
+          <button class="btn-ic" title="Renomear" onclick="openRenameCat('${esc}')">✏️</button>
+          <button class="btn-ic" title="Mover para outro grupo" onclick="openMoveCat('${esc}','${macEsc}')">↕️</button>
+          <button class="btn-ic" title="Excluir" onclick="delCat('${esc}','${macEsc}')">🗑</button>
+        </div></td>
       </tr>`;
     }).join('')}</tbody>
   </table></div>
 </div>`).join('')}`;
 }
 
+// ── CAT MANAGEMENT ────────────────────────────────
+function openAddCat(){
+  const macros=getMacros();
+  openMd('➕ Nova Categoria',`
+    <div class="fg">
+      <div class="fi s2"><label>Nome da Categoria</label><input type="text" id="nc-n" placeholder="ex: Streaming, Farmácia, Pets…"/></div>
+      <div class="fi s2"><label>Vincular ao Grupo</label>
+        <select id="nc-m">${macros.map(m=>`<option value="${m.id}">${m.emoji} ${m.nome}</option>`).join('')}</select>
+      </div>
+    </div>`,
+  ()=>{
+    const nome=document.getElementById('nc-n').value.trim();
+    const macId=document.getElementById('nc-m').value;
+    if(!nome){toast('Informe o nome','err');return false;}
+    const macros=getMacros();
+    if(macros.flatMap(m=>m.cats).includes(nome)){toast('Categoria já existe','err');return false;}
+    const mac=macros.find(m=>m.id===macId);
+    if(mac){mac.cats.push(nome);save();toast(`"${nome}" adicionada!`);}
+    go('cats');return true;
+  });
+}
+
+function openRenameCat(oldName){
+  openMd('✏️ Renomear Categoria',`
+    <div class="fg">
+      <div class="fi s2"><label>Nome atual</label><input type="text" value="${oldName}" disabled style="opacity:.5"/></div>
+      <div class="fi s2"><label>Novo nome</label><input type="text" id="rc-n" value="${oldName}"/></div>
+    </div>`,
+  ()=>{
+    const newName=document.getElementById('rc-n').value.trim();
+    if(!newName){toast('Informe o nome','err');return false;}
+    const macros=getMacros();
+    if(macros.flatMap(m=>m.cats).includes(newName)&&newName!==oldName){toast('Já existe','err');return false;}
+    macros.forEach(m=>{const i=m.cats.indexOf(oldName);if(i>-1)m.cats[i]=newName;});
+    Object.values(S.data).forEach(d=>['trans','pagar'].forEach(l=>(d[l]||[]).forEach(item=>{if(item.categoria===oldName)item.categoria=newName;})));
+    if(S.orcMicro[oldName]!==undefined){S.orcMicro[newName]=S.orcMicro[oldName];delete S.orcMicro[oldName];}
+    save();toast(`Renomeada para "${newName}"!`);go('cats');return true;
+  });
+}
+
+function openMoveCat(cat,currentMacId){
+  const macros=getMacros();
+  const others=macros.filter(m=>m.id!==currentMacId);
+  if(!others.length){toast('Só existe um grupo','err');return;}
+  openMd(`↕️ Mover "${cat}"`,`
+    <div class="fi"><label>Mover para o grupo</label>
+      <select id="mv-m">${others.map(m=>`<option value="${m.id}">${m.emoji} ${m.nome}</option>`).join('')}</select>
+    </div>`,
+  ()=>{
+    const targetId=document.getElementById('mv-m').value;
+    const macros=getMacros();
+    const cur=macros.find(m=>m.id===currentMacId);
+    if(cur)cur.cats=cur.cats.filter(c=>c!==cat);
+    const target=macros.find(m=>m.id===targetId);
+    if(target&&!target.cats.includes(cat))target.cats.push(cat);
+    save();toast(`"${cat}" movida para ${target?.nome}!`);go('cats');return true;
+  });
+}
+
+function delCat(cat,macId){
+  if(!confirm('Excluir a categoria "'+cat+'"?\n\nLançamentos com essa categoria ficarão sem categoria.'))return;
+  const macros=getMacros();
+  const mac=macros.find(m=>m.id===macId);
+  if(mac)mac.cats=mac.cats.filter(c=>c!==cat);
+  Object.values(S.data).forEach(d=>['trans','pagar'].forEach(l=>(d[l]||[]).forEach(item=>{if(item.categoria===cat)item.categoria='';})));
+  delete S.orcMicro[cat];
+  save();toast('"'+cat+'" excluída','err');go('cats');
+}
 // ══════════════ CARTÕES ═══════════════════════════
 function pCards(){
   const cards=getCards();
@@ -1018,7 +1106,7 @@ function pAnual(){
   }
   for(let i=1;i<actMons.length;i++){
     const cur=actMons[i],prv=actMons[i-1];
-    MACROS.forEach(mac=>{
+    getMacros().forEach(mac=>{
       const cv=cur.mt.find(x=>x.mac.id===mac.id)?.real||0;
       const pv=prv.mt.find(x=>x.mac.id===mac.id)?.real||0;
       if(pv>0){
@@ -1090,8 +1178,8 @@ ${pairs.length?`<div class="sec">
       {lbl:'💵 Entradas',get:md=>md.t.tE,good:true},
       {lbl:'💸 Saídas',get:md=>md.t.tS,good:false},
       {lbl:'💰 Saldo',get:md=>md.t.saldo,good:true},
-      ...MACROS.map(mac=>({lbl:`${mac.emoji} ${mac.nome}`,get:md=>md.mt.find(x=>x.mac.id===mac.id)?.real||0,good:false})),
-      ...ALL_CATS.map(cat=>({lbl:`  ${cat}`,get:md=>md.ct[cat]||0,good:false,micro:true}))
+      ...getMacros().map(mac=>({lbl:`${mac.emoji} ${mac.nome}`,get:md=>md.mt.find(x=>x.mac.id===mac.id)?.real||0,good:false})),
+      ...getAllCats().map(cat=>({lbl:`  ${cat}`,get:md=>md.ct[cat]||0,good:false,micro:true}))
     ].map(row=>`<tr>
       <td style="${row.micro?'color:var(--tx3);padding-left:24px':''}">${row.lbl}</td>
       ${pairs.map(p=>{
@@ -1129,7 +1217,7 @@ ${mdata.map((md,i)=>{
         {lbl:'💵 Entradas',v:md.t.tE,prev:prev?.t.tE,good:true,c:'var(--green)'},
         {lbl:'💸 Saídas',v:md.t.tS,prev:prev?.t.tS,good:false,c:'var(--red)'},
         ...md.mt.map(item=>({lbl:`${item.mac.emoji} ${item.mac.nome}`,v:item.real,prev:prev?.mt.find(x=>x.mac.id===item.mac.id)?.real,good:false,c:item.mac.cor})),
-        ...ALL_CATS.map(cat=>({lbl:cat,v:md.ct[cat]||0,prev:prev?.ct[cat]||0,good:false,c:'var(--tx2)',micro:true})).filter(x=>x.v>0)
+        ...getAllCats().map(cat=>({lbl:cat,v:md.ct[cat]||0,prev:prev?.ct[cat]||0,good:false,c:'var(--tx2)',micro:true})).filter(x=>x.v>0)
       ].map(row=>`<div class="mrow" style="${row.micro?'padding-left:12px':''}">
         <span style="color:${row.micro?'var(--tx3)':'var(--tx2)'};font-size:${row.micro?'.7rem':'.75rem'}">${row.lbl}</span>
         <div class="mrow-r">
@@ -1497,6 +1585,7 @@ function impData(e){
         if(d.orcMacro)S.orcMacro=d.orcMacro;
         if(d.orcMicro)S.orcMicro=d.orcMicro;
         if(d.metas)S.metas=d.metas;
+        if(d.macros)S.macros=d.macros;
         save();toast('Importado!');render();
       }else toast('Arquivo inválido','err');
     }catch{toast('Erro ao importar','err');}
