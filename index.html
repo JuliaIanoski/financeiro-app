@@ -678,14 +678,13 @@ function pTrans(){
 <div class="sec">
   <div class="sec-h"><div class="sec-t">💸 Todos os Lançamentos</div><span style="font-size:.75rem;color:var(--tx3)">${allRows.length} item(s)</span></div>
   <div class="tw ts">
-  ${allRows.length?`<table><thead><tr><th>Nome</th><th>Tipo</th><th>Categoria</th><th>Forma</th><th>Data</th><th style="text-align:right">Valor</th><th></th></tr></thead>
+  ${allRows.length?`<table><thead><tr><th>Nome</th><th>Categoria</th><th>Forma</th><th>Data</th><th style="text-align:right">Valor</th><th></th></tr></thead>
   <tbody>${allRows.map((x,i)=>`<tr>
     <td class="nm">${x.nome||'—'}</td>
-    <td><span class="badge ${x._tipo==='entrada'?'bg':'br'}" style="font-size:.62rem">${x._tipo==='entrada'?'↑ Entrada':'↓ Saída'}</span></td>
     <td>${x.categoria?`<span class="badge bb" style="font-size:.62rem">${x.categoria}</span>`:`<span style="font-size:.65rem;color:var(--tx3);font-style:italic">Sem cat.</span>`}</td>
     <td>${x.tipo?tbadge(x.tipo):'—'}</td>
     <td style="color:var(--tx3);font-size:.73rem">${x.data||'—'}</td>
-    <td class="am ${x._tipo==='entrada'?'cr':'db'}">${fmt(x.valor)}</td>
+    <td class="am" style="color:${x._tipo==='entrada'?'var(--green)':'var(--red)'};font-family:var(--mo)">${x._tipo==='entrada'?'+':'-'} ${fmt(x.valor)}</td>
     <td>${x._tipo==='saida'?`<button class="btn-ic" onclick="rmTrans(${gm().trans.indexOf(x)})">🗑</button>`:''}</td>
   </tr>`).join('')}</tbody></table>`
   :'<div class="empty"><div class="empty-icon">🛒</div><div class="empty-txt">Nenhuma transação encontrada.</div></div>'}
@@ -790,7 +789,7 @@ function pReceber(){
 <div class="sec">
   <div class="sec-h"><div class="sec-t">📥 A Receber em ${mname(S.month)}</div></div>
   <div class="tw">
-  ${rows.length?`<table><thead><tr><th>Nome/Origem</th><th>Descrição</th><th>Parcela</th><th>Vencimento</th><th>Forma</th><th>Status</th><th style="text-align:right">Valor</th><th></th></tr></thead>
+  ${rows.length?`<table><thead><tr><th>Nome/Origem</th><th>Descrição</th><th>Parcela</th><th>Vencimento</th><th>Categoria</th><th>Forma</th><th>Status</th><th style="text-align:right">Valor</th><th></th></tr></thead>
   <tbody>${rows.map((row,ri)=>{
     const{item,idx,mk,parcIdx,parc}=row;
     const isParc=parcIdx!==null;
@@ -802,15 +801,16 @@ function pReceber(){
       <td style="color:var(--tx3);font-size:.73rem">${item.desc||'—'}</td>
       <td>${isParc?`<span class="parc-badge">${parc.num}/${item.parcelas}</span>`:'<span style="font-size:.72rem;color:var(--tx3)">À vista</span>'}</td>
       <td style="font-size:.73rem">${venc||'—'}</td>
+      <td>${item.categoria?`<span class="badge bb" style="font-size:.62rem">${item.categoria}</span>`:'<span style="font-size:.65rem;color:var(--tx3);font-style:italic">Sem cat.</span>'}</td>
       <td>${item.forma?`<span class="badge bb" style="font-size:.63rem">${item.forma}</span>`:'—'}</td>
       <td>${statusBadge(status,venc)}</td>
-      <td class="am cr">${fmt(valor)}</td>
+      <td class="am" style="color:var(--green)">${fmt(valor)}</td>
       <td style="display:flex;gap:4px;flex-wrap:wrap">
         ${status!=='pago'
           ?`<button class="btn btn-green btn-sm" onclick="${isParc?`pagarParcela('receber',${idx},${parcIdx},'${mk}')`:`pagarReceber(${idx},'${mk}')`}">✅ Receber</button>`
-          :`<button class="btn btn-g btn-sm" onclick="${isParc?`desfazerParcela('receber',${idx},${parcIdx},'${mk}')`:`desfazerReceber(${idx},'${mk}')`}" style="color:var(--yellow);border-color:var(--yellow)40">↩️ Desfazer</button>`}
-        <button class="btn-ic" onclick="verParcelas('receber',${idx},'${mk}')">📋</button>
-        ${!isParc?`<button class="btn-ic" onclick="rmReceberGlobal('${mk}',${idx})">🗑</button>`:''}
+          :`<button class="btn btn-g btn-sm" onclick="${isParc?`desfazerParcela('receber',${idx},${parcIdx},'${mk}')`:`desfazerReceber(${idx},'${mk}')`}" style="color:var(--yellow);border-color:rgba(255,209,102,.3)">↩️ Desfazer</button>`}
+        <button class="btn-ic" title="Ver/editar parcelas" onclick="verParcelas('receber',${idx},'${mk}')">📋</button>
+        ${!isParc?`<button class="btn-ic" title="Editar" onclick="openReceberEdit('${mk}',${idx})">✏️</button><button class="btn-ic" onclick="rmReceberGlobal('${mk}',${idx})">🗑</button>`:''}
       </td>
     </tr>`;
   }).join('')}</tbody></table>`
@@ -819,6 +819,72 @@ function pReceber(){
 </div>`;
 }
 
+
+function openReceberEdit(mk,idx){
+  const md=S.data[mk];if(!md)return;
+  const item=(md.receber||[])[idx];if(!item)return;
+  const today=new Date().toISOString().slice(0,10);
+  const x=item;
+  openMd('✏️ Editar Conta a Receber',`
+    <div class="fg">
+      <div class="fi s2"><label>Nome / Origem</label><input type="text" id="m-n" value="${x.nome||''}"/></div>
+      <div class="fi s2"><label>Descrição</label><input type="text" id="m-desc" value="${x.desc||''}"/></div>
+      <div class="fi"><label>Valor Total (R$)</label><input type="text" id="m-v" value="${x.valor?fmtBRL(x.valor):''}" class="brl"/></div>
+      <div class="fi"><label>Vencimento</label><input type="date" id="m-venc" value="${x.venc||today}"/></div>
+      <div class="fi"><label>Forma de Recebimento</label><select id="m-forma">
+        <option value="">—</option>${['PIX','Transferência','Dinheiro','Cheque','Outros'].map(f=>`<option ${x.forma===f?'selected':''}>${f}</option>`).join('')}
+      </select></div>
+      <div class="fi"><label>Categoria</label><select id="m-cat">
+        <option value="">—</option>${getAllCats().map(c=>`<option ${x.categoria===c?'selected':''}>${c}</option>`).join('')}
+      </select></div>
+      <div class="fi s2"><label>Observações</label><textarea id="m-obs">${x.obs||''}</textarea></div>
+    </div>`,
+  ()=>{
+    const nome=document.getElementById('m-n').value.trim();
+    const valor=parseBRL(document.getElementById('m-v').value);
+    if(!nome||!valor){toast('Preencha nome e valor','err');return false;}
+    item.nome=nome;item.valor=valor;
+    item.desc=document.getElementById('m-desc').value.trim();
+    item.venc=document.getElementById('m-venc').value;
+    item.forma=document.getElementById('m-forma').value;
+    item.categoria=document.getElementById('m-cat').value;
+    item.obs=document.getElementById('m-obs').value.trim();
+    save();toast(`${nome} atualizado!`);return true;
+  });
+}
+
+function openPagarEdit(mk,idx){
+  const md=S.data[mk];if(!md)return;
+  const item=(md.pagar||[])[idx];if(!item)return;
+  const today=new Date().toISOString().slice(0,10);
+  const x=item;
+  openMd('✏️ Editar Conta a Pagar',`
+    <div class="fg">
+      <div class="fi s2"><label>Nome / Empresa</label><input type="text" id="m-n" value="${x.nome||''}"/></div>
+      <div class="fi s2"><label>Descrição</label><input type="text" id="m-desc" value="${x.desc||''}"/></div>
+      <div class="fi"><label>Valor Total (R$)</label><input type="text" id="m-v" value="${x.valor?fmtBRL(x.valor):''}" class="brl"/></div>
+      <div class="fi"><label>Vencimento</label><input type="date" id="m-venc" value="${x.venc||today}"/></div>
+      <div class="fi"><label>Forma de Pagamento</label><select id="m-forma">
+        <option value="">—</option>${getTipos().map(f=>`<option ${x.forma===f?'selected':''}>${f}</option>`).join('')}
+      </select></div>
+      <div class="fi"><label>Categoria</label><select id="m-cat">
+        <option value="">—</option>${getAllCats().map(c=>`<option ${x.categoria===c?'selected':''}>${c}</option>`).join('')}
+      </select></div>
+      <div class="fi s2"><label>Observações</label><textarea id="m-obs">${x.obs||''}</textarea></div>
+    </div>`,
+  ()=>{
+    const nome=document.getElementById('m-n').value.trim();
+    const valor=parseBRL(document.getElementById('m-v').value);
+    if(!nome||!valor){toast('Preencha nome e valor','err');return false;}
+    item.nome=nome;item.valor=valor;
+    item.desc=document.getElementById('m-desc').value.trim();
+    item.venc=document.getElementById('m-venc').value;
+    item.forma=document.getElementById('m-forma').value;
+    item.categoria=document.getElementById('m-cat').value;
+    item.obs=document.getElementById('m-obs').value.trim();
+    save();toast(`${nome} atualizado!`);return true;
+  });
+}
 function rmReceberGlobal(mk,idx){
   if(!confirm('Remover esta conta e todas as parcelas?'))return;
   if(S.data[mk]&&S.data[mk].receber)S.data[mk].receber.splice(idx,1);
@@ -905,7 +971,7 @@ function pPagar(){
 <div class="sec">
   <div class="sec-h"><div class="sec-t">📤 A Pagar em ${mname(S.month)}</div></div>
   <div class="tw">
-  ${rows.length?`<table><thead><tr><th>Nome/Empresa</th><th>Descrição</th><th>Parcela</th><th>Vencimento</th><th>Forma</th><th>Status</th><th style="text-align:right">Valor</th><th></th></tr></thead>
+  ${rows.length?`<table><thead><tr><th>Nome/Empresa</th><th>Descrição</th><th>Parcela</th><th>Vencimento</th><th>Categoria</th><th>Forma</th><th>Status</th><th style="text-align:right">Valor</th><th></th></tr></thead>
   <tbody>${rows.map((row,ri)=>{
     const{item,idx,mk,parcIdx,parc}=row;
     const isParc=parcIdx!==null;
@@ -917,15 +983,16 @@ function pPagar(){
       <td style="color:var(--tx3);font-size:.73rem">${item.desc||'—'}</td>
       <td>${isParc?`<span class="parc-badge">${parc.num}/${item.parcelas}</span>`:'<span style="font-size:.72rem;color:var(--tx3)">À vista</span>'}</td>
       <td style="font-size:.73rem">${venc||'—'}</td>
+      <td>${item.categoria?`<span class="badge bb" style="font-size:.62rem">${item.categoria}</span>`:'<span style="font-size:.65rem;color:var(--tx3);font-style:italic">Sem cat.</span>'}</td>
       <td>${item.forma?`<span class="badge bb" style="font-size:.63rem">${item.forma}</span>`:'—'}</td>
       <td>${statusBadge(status,venc)}</td>
-      <td class="am db">${fmt(valor)}</td>
+      <td class="am" style="color:var(--red)">${fmt(valor)}</td>
       <td style="display:flex;gap:4px;flex-wrap:wrap">
         ${status!=='pago'
           ?`<button class="btn btn-red btn-sm" onclick="${isParc?`pagarParcela('pagar',${idx},${parcIdx},'${mk}')`:`pagarContaGlobal(${idx},'${mk}')`}">✅ Pagar</button>`
-          :`<button class="btn btn-g btn-sm" onclick="${isParc?`desfazerParcela('pagar',${idx},${parcIdx},'${mk}')`:`desfazerPagamento(${idx},'${mk}')`}" style="color:var(--yellow);border-color:var(--yellow)40">↩️ Desfazer</button>`}
-        <button class="btn-ic" onclick="verParcelas('pagar',${idx},'${mk}')">📋</button>
-        ${!isParc?`<button class="btn-ic" onclick="rmPagarGlobal('${mk}',${idx})">🗑</button>`:''}
+          :`<button class="btn btn-g btn-sm" onclick="${isParc?`desfazerParcela('pagar',${idx},${parcIdx},'${mk}')`:`desfazerPagamento(${idx},'${mk}')`}" style="color:var(--yellow);border-color:rgba(255,209,102,.3)">↩️ Desfazer</button>`}
+        <button class="btn-ic" title="Ver/editar parcelas" onclick="verParcelas('pagar',${idx},'${mk}')">📋</button>
+        ${!isParc?`<button class="btn-ic" title="Editar" onclick="openPagarEdit('${mk}',${idx})">✏️</button><button class="btn-ic" onclick="rmPagarGlobal('${mk}',${idx})">🗑</button>`:''}
       </td>
     </tr>`;
   }).join('')}</tbody></table>`
