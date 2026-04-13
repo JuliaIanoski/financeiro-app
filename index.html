@@ -614,12 +614,29 @@ function initDashChart(){
 
 // ══════════════ TRANSAÇÕES ════════════════════════
 function pTrans(){
-  const g=gm().trans;
   const catOpts=getAllCats().map(c=>`<option>${c}</option>`).join('');
   const tOpts=getTipos().map(t=>`<option>${t}</option>`).join('');
+  // Filtros
+  const fCat=window._fCat||'';
+  const fDe=window._fDe||'';
+  const fAte=window._fAte||'';
+  // Coletar TODAS as transações do mês: manuais + auto-lançamentos de contas
+  const d=gm();
+  // saídas: trans
+  let allSaidas=d.trans.map(t=>({...t,_tipo:'saida'}));
+  // entradas: entradas manuais + recebimentos automáticos
+  let allEntradas=d.entradas.map(e=>({...e,_tipo:'entrada',valor:e.valor}));
+  // juntar tudo
+  let allRows=[...allSaidas,...allEntradas].sort((a,b)=>new Date(b.data||0)-new Date(a.data||0));
+  // aplicar filtros
+  if(fCat) allRows=allRows.filter(x=>x.categoria===fCat);
+  if(fDe)  allRows=allRows.filter(x=>x.data&&x.data>=fDe);
+  if(fAte) allRows=allRows.filter(x=>x.data&&x.data<=fAte);
+  const totalSaidas=allRows.filter(x=>x._tipo==='saida').reduce((s,x)=>s+(+x.valor||0),0);
+  const totalEntradas=allRows.filter(x=>x._tipo==='entrada').reduce((s,x)=>s+(+x.valor||0),0);
   return`
 <div class="ph" style="display:flex;align-items:flex-start;justify-content:space-between">
-  <div><div class="pt">🛒 Transações</div><div class="ps">${mname(S.month)} · ${g.length} item(s) · ${fmt(sum(g,'valor'))}</div></div>
+  <div><div class="pt">🛒 Transações</div><div class="ps">${mname(S.month)} · ${allRows.length} item(s)</div></div>
   <button class="btn btn-p" onclick="openTrans()">+ Adicionar</button>
 </div>
 <div class="qa">
@@ -632,19 +649,46 @@ function pTrans(){
     <button class="btn btn-p" onclick="quickAdd()" style="height:36px;align-self:flex-end;white-space:nowrap">Salvar</button>
   </div>
 </div>
+
+<!-- FILTROS -->
+<div style="background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:14px 18px;margin-bottom:16px;display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
+  <div style="font-size:.72rem;font-weight:600;color:var(--blue);align-self:center">🔍 Filtros</div>
+  <div class="cfi" style="min-width:140px">
+    <label>Categoria</label>
+    <select onchange="window._fCat=this.value;go('trans')" style="font-size:.78rem;padding:6px 9px">
+      <option value="">Todas</option>${catOpts}
+    </select>
+  </div>
+  <div class="cfi">
+    <label>De</label>
+    <input type="date" value="${fDe}" onchange="window._fDe=this.value;go('trans')" style="font-size:.78rem;padding:6px 9px"/>
+  </div>
+  <div class="cfi">
+    <label>Até</label>
+    <input type="date" value="${fAte}" onchange="window._fAte=this.value;go('trans')" style="font-size:.78rem;padding:6px 9px"/>
+  </div>
+  ${(fCat||fDe||fAte)?`<button class="btn btn-g btn-sm" onclick="window._fCat='';window._fDe='';window._fAte='';go('trans')" style="align-self:flex-end">✕ Limpar</button>`:''}
+  <div style="margin-left:auto;align-self:center;font-size:.75rem;color:var(--tx3)">
+    <span style="color:var(--red);font-family:var(--mo)">↓ ${fmt(totalSaidas)}</span>
+    <span style="margin:0 8px;color:var(--bd2)">|</span>
+    <span style="color:var(--green);font-family:var(--mo)">↑ ${fmt(totalEntradas)}</span>
+  </div>
+</div>
+
 <div class="sec">
-  <div class="sec-h"><div class="sec-t">💸 Todas as Transações</div></div>
+  <div class="sec-h"><div class="sec-t">💸 Todos os Lançamentos</div><span style="font-size:.75rem;color:var(--tx3)">${allRows.length} item(s)</span></div>
   <div class="tw ts">
-  ${g.length?`<table><thead><tr><th>Nome</th><th>Categoria</th><th>Tipo</th><th>Data</th><th style="text-align:right">Valor</th><th></th></tr></thead>
-  <tbody>${g.map((x,i)=>`<tr>
+  ${allRows.length?`<table><thead><tr><th>Nome</th><th>Tipo</th><th>Categoria</th><th>Forma</th><th>Data</th><th style="text-align:right">Valor</th><th></th></tr></thead>
+  <tbody>${allRows.map((x,i)=>`<tr>
     <td class="nm">${x.nome||'—'}</td>
-    <td>${x.categoria?`<span class="badge bb">${x.categoria}</span>`:`<span style="font-size:.68rem;color:var(--tx3);font-style:italic">Sem categoria</span>`}</td>
+    <td><span class="badge ${x._tipo==='entrada'?'bg':'br'}" style="font-size:.62rem">${x._tipo==='entrada'?'↑ Entrada':'↓ Saída'}</span></td>
+    <td>${x.categoria?`<span class="badge bb" style="font-size:.62rem">${x.categoria}</span>`:`<span style="font-size:.65rem;color:var(--tx3);font-style:italic">Sem cat.</span>`}</td>
     <td>${x.tipo?tbadge(x.tipo):'—'}</td>
     <td style="color:var(--tx3);font-size:.73rem">${x.data||'—'}</td>
-    <td class="am db">${fmt(x.valor)}</td>
-    <td><button class="btn-ic" onclick="rmTrans(${i})">🗑</button></td>
+    <td class="am ${x._tipo==='entrada'?'cr':'db'}">${fmt(x.valor)}</td>
+    <td>${x._tipo==='saida'?`<button class="btn-ic" onclick="rmTrans(${gm().trans.indexOf(x)})">🗑</button>`:''}</td>
   </tr>`).join('')}</tbody></table>`
-  :'<div class="empty"><div class="empty-icon">🛒</div><div class="empty-txt">Nenhuma transação.<br>Use o lançamento rápido acima.</div></div>'}
+  :'<div class="empty"><div class="empty-icon">🛒</div><div class="empty-txt">Nenhuma transação encontrada.</div></div>'}
   </div>
 </div>`;
 }
@@ -806,6 +850,9 @@ function openReceber(idx=null){
       <div class="fi"><label>Forma de Recebimento</label><select id="m-forma">
         <option value="">—</option>${['PIX','Transferência','Dinheiro','Cheque','Outros'].map(f=>`<option ${x.forma===f?'selected':''}>${f}</option>`).join('')}
       </select></div>
+      <div class="fi"><label>Categoria</label><select id="m-cat">
+        <option value="">—</option>${getAllCats().map(c=>`<option ${x.categoria===c?'selected':''}>${c}</option>`).join('')}
+      </select></div>
       <div class="fi s2"><label>Observações</label><textarea id="m-obs">${x.obs||''}</textarea></div>
     </div>`,
   ()=>{
@@ -815,7 +862,7 @@ function openReceber(idx=null){
     const parcelas=parseInt(document.getElementById('m-parc').value)||1;
     const venc=document.getElementById('m-venc').value;
     const itemId=uid();
-    const item={id:itemId,nome,valor,desc:document.getElementById('m-desc').value.trim(),venc,parcelas,forma:document.getElementById('m-forma').value,obs:document.getElementById('m-obs').value.trim(),status:'pendente'};
+    const item={id:itemId,nome,valor,desc:document.getElementById('m-desc').value.trim(),venc,parcelas,forma:document.getElementById('m-forma').value,categoria:document.getElementById('m-cat')?.value||'',obs:document.getElementById('m-obs').value.trim(),status:'pendente'};
     if(parcelas>1){
       item.parc=[];
       const vBase=new Date(venc+'T00:00:00');
@@ -837,7 +884,7 @@ function pagarReceber(idx,mk){
   if(r.parcelas>1){toast('Use 📋 para gerenciar parcelas','warn');return;}
   r.status='pago';
   if(!md.entradas)md.entradas=[];
-  md.entradas.push({id:uid(),nome:`[Recebido] ${r.nome}`,valor:r.valor,data:new Date().toISOString().slice(0,10),tipo:r.forma||'—'});
+  md.entradas.push({id:uid(),nome:`[Recebido] ${r.nome}`,valor:r.valor,data:new Date().toISOString().slice(0,10),tipo:r.forma||'—',categoria:r.categoria||''});
   save();toast(`${r.nome} recebido! ✅`);go('receber');
 }
 function rmReceber(i){if(!confirm('Remover?'))return;gm().receber.splice(i,1);save();toast('Removido','err');go('receber');}
