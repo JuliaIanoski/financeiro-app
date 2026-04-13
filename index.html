@@ -762,7 +762,9 @@ function pReceber(){
       <td>${statusBadge(status,venc)}</td>
       <td class="am cr">${fmt(valor)}</td>
       <td style="display:flex;gap:4px;flex-wrap:wrap">
-        ${status!=='pago'?`<button class="btn btn-green btn-sm" onclick="${isParc?`pagarParcela('receber',${idx},${parcIdx},'${mk}')`:`pagarReceber(${idx},'${mk}')`}">✅</button>`:''}
+        ${status!=='pago'
+          ?`<button class="btn btn-green btn-sm" onclick="${isParc?`pagarParcela('receber',${idx},${parcIdx},'${mk}')`:`pagarReceber(${idx},'${mk}')`}">✅ Receber</button>`
+          :`<button class="btn btn-g btn-sm" onclick="${isParc?`desfazerParcela('receber',${idx},${parcIdx},'${mk}')`:`desfazerReceber(${idx},'${mk}')`}" style="color:var(--yellow);border-color:var(--yellow)40">↩️ Desfazer</button>`}
         <button class="btn-ic" onclick="verParcelas('receber',${idx},'${mk}')">📋</button>
         ${!isParc?`<button class="btn-ic" onclick="rmReceberGlobal('${mk}',${idx})">🗑</button>`:''}
       </td>
@@ -872,7 +874,9 @@ function pPagar(){
       <td>${statusBadge(status,venc)}</td>
       <td class="am db">${fmt(valor)}</td>
       <td style="display:flex;gap:4px;flex-wrap:wrap">
-        ${status!=='pago'?`<button class="btn btn-red btn-sm" onclick="${isParc?`pagarParcela('pagar',${idx},${parcIdx},'${mk}')`:`pagarContaGlobal(${idx},'${mk}')`}">✅</button>`:''}
+        ${status!=='pago'
+          ?`<button class="btn btn-red btn-sm" onclick="${isParc?`pagarParcela('pagar',${idx},${parcIdx},'${mk}')`:`pagarContaGlobal(${idx},'${mk}')`}">✅ Pagar</button>`
+          :`<button class="btn btn-g btn-sm" onclick="${isParc?`desfazerParcela('pagar',${idx},${parcIdx},'${mk}')`:`desfazerPagamento(${idx},'${mk}')`}" style="color:var(--yellow);border-color:var(--yellow)40">↩️ Desfazer</button>`}
         <button class="btn-ic" onclick="verParcelas('pagar',${idx},'${mk}')">📋</button>
         ${!isParc?`<button class="btn-ic" onclick="rmPagarGlobal('${mk}',${idx})">🗑</button>`:''}
       </td>
@@ -967,9 +971,11 @@ function verParcelas(tipo,idx,itemMonth){
         <td style="padding:7px 10px">${statusBadge(p.status,p.venc)}</td>
         <td style="padding:7px 10px">
           <div style="display:flex;gap:5px">
-            ${p.status!=='pago'?`<button class="btn btn-${tipo==='receber'?'green':'red'} btn-sm" onclick="pagarParcela('${tipo}',${idx},${pi},'${itemMonth}')">✅</button>`:''}
+            ${p.status!=='pago'
+              ?`<button class="btn btn-${tipo==='receber'?'green':'red'} btn-sm" onclick="pagarParcela('${tipo}',${idx},${pi},'${itemMonth}')">✅</button>`
+              :`<button class="btn btn-g btn-sm" onclick="desfazerParcela('${tipo}',${idx},${pi},'${itemMonth}')" style="color:var(--yellow);border-color:rgba(255,209,102,.3)">↩️</button>`}
             <button class="btn btn-g btn-sm" onclick="editParcela('${tipo}',${idx},${pi},'${itemMonth}')">✏️</button>
-            ${p.status!=='pago'?`<button class="btn-ic" title="Excluir parcela" onclick="delParcela('${tipo}',${idx},${pi},'${itemMonth}')">🗑</button>`:'<span style=\"font-size:.65rem;color:var(--green)\">pago</span>'}
+            ${p.status!=='pago'?`<button class="btn-ic" title="Excluir parcela" onclick="delParcela('${tipo}',${idx},${pi},'${itemMonth}')">🗑</button>`:''}
           </div>
         </td>
       </tr>`).join('')}</tbody>
@@ -1032,6 +1038,49 @@ function editParcela(tipo,idx,pi,itemMonth){
     save();toast(`Parcela ${parc.num} atualizada! R$ ${fmtBRL(novoValor)}`);
     return true;
   });
+}
+
+function desfazerParcela(tipo,idx,pi,itemMonth){
+  const mKey=itemMonth||S.month;
+  const md=S.data[mKey];if(!md)return;
+  const list=tipo==='receber'?(md.receber||[]):(md.pagar||[]);
+  const item=list[idx];if(!item||!item.parc)return;
+  const parc=item.parc[pi];
+  parc.status='pendente';
+  // remove o lançamento automático gerado quando foi pago
+  const pMes=parc.venc?parc.venc.slice(0,7):mKey;
+  const mPago=S.data[pMes];
+  if(mPago){
+    const nome=`[${parc.num}/${item.parcelas}] ${item.nome}`;
+    if(tipo==='receber'&&mPago.entradas)
+      mPago.entradas=mPago.entradas.filter(e=>e.nome!==nome||Math.abs(e.valor-parc.valor)>0.01);
+    if(tipo==='pagar'&&mPago.trans)
+      mPago.trans=mPago.trans.filter(t=>t.nome!==nome||Math.abs(t.valor-parc.valor)>0.01);
+  }
+  // se alguma parcela ficar pendente, status geral volta a pendente
+  item.status='pendente';
+  save();toast('Parcela voltou para pendente ↩️','warn');
+  closeM();setTimeout(()=>go(tipo==='receber'?'receber':'pagar'),100);
+}
+
+function desfazerReceber(idx,mk){
+  const md=S.data[mk||S.month];if(!md)return;
+  const r=(md.receber||[])[idx];if(!r)return;
+  r.status='pendente';
+  // remove lançamento automático nas entradas
+  const nome=`[Recebido] ${r.nome}`;
+  if(md.entradas)md.entradas=md.entradas.filter(e=>e.nome!==nome||Math.abs(e.valor-r.valor)>0.01);
+  save();toast(`${r.nome} voltou para pendente ↩️`,'warn');go('receber');
+}
+
+function desfazerPagamento(idx,mk){
+  const md=S.data[mk||S.month];if(!md)return;
+  const p=(md.pagar||[])[idx];if(!p)return;
+  p.status='pendente';
+  // remove lançamento automático nas transações
+  const nome=`[Pago] ${p.nome}`;
+  if(md.trans)md.trans=md.trans.filter(t=>t.nome!==nome||Math.abs(t.valor-p.valor)>0.01);
+  save();toast(`${p.nome} voltou para pendente ↩️`,'warn');go('pagar');
 }
 
 function delParcela(tipo,idx,pi,itemMonth){
