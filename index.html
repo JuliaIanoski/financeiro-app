@@ -1788,8 +1788,12 @@ function calcConv(){
   </div></div>`;}
 
 // ══════════════ MODAL ════════════════════════════
+// Modal stack — suporta múltiplos modais empilhados
+const _mdStack=[];
 function openMd(title,body,onSave,readOnly=false){
-  const ov=document.createElement('div');ov.className='mo';ov.id='modal-ov';
+  const id='md-'+Date.now();
+  const ov=document.createElement('div');
+  ov.className='mo';ov.dataset.mdid=id;
   ov.onclick=e=>{if(e.target===ov)closeM();};
   ov.innerHTML=`<div class="md">
     <div class="mh"><div class="mt">${title}</div><button class="btn-ic" onclick="closeM()">✕</button></div>
@@ -1797,14 +1801,19 @@ function openMd(title,body,onSave,readOnly=false){
     ${!readOnly?`<div class="mf"><button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="handleSave()">Salvar</button></div>`:''}
   </div>`;
   ov._onSave=onSave;
+  _mdStack.push(ov);
   document.body.appendChild(ov);
-  setTimeout(()=>{applyMasks();document.querySelector('#modal-ov input[type=text],#modal-ov input[type=number]')?.focus();},60);
+  setTimeout(()=>{applyMasks();ov.querySelector('input[type=text],input[type=number]')?.focus();},60);
 }
 function handleSave(){
-  const ov=document.getElementById('modal-ov');
+  const ov=_mdStack[_mdStack.length-1];
   if(ov&&ov._onSave){const ok=ov._onSave();if(ok!==false){closeM();rpage();}}
 }
-function closeM(){document.getElementById('modal-ov')?.remove();}
+function closeM(){
+  const ov=_mdStack.pop();
+  if(ov)ov.remove();
+  else document.querySelector('.mo')?.remove();
+}
 
 // ══════════════ IMPORT/EXPORT ════════════════════
 function expData(){
