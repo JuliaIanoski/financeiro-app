@@ -376,27 +376,33 @@ function mname(ym){const[y,m]=ym.split('-');return['Janeiro','Fevereiro','Março
 const sum=(a,f)=>a.reduce((s,b)=>s+(+b[f]||0),0);
 const sumCat=(arr,cat)=>arr.filter(x=>x.categoria===cat).reduce((s,b)=>s+(+b.valor||0),0);
 function parseBRL(s){
-  if(!s)return 0;
+  if(!s&&s!==0)return 0;
   s=String(s).trim();
-  // Remove R$ prefix if present
-  s=s.replace(/^R\$\s*/,'').trim();
-  // Handle Brazilian format: 1.234,56 -> 1234.56
-  if(s.includes(','))s=s.replace(/\./g,'').replace(',','.');
-  return parseFloat(s)||0;
+  s=s.replace(/^R\$\s*/,'').trim(); // remove R$
+  s=s.replace(/\s/g,''); // remove spaces
+  // Se tem vírgula: formato BR (1.234,56 ou 1234,56)
+  if(s.includes(',')){
+    s=s.replace(/\./g,'').replace(',','.');
+  }
+  // Se não tem vírgula mas tem ponto: pode ser separador decimal inglês
+  // ex: 157.29 → deixa como está
+  const v=parseFloat(s);
+  return isNaN(v)?0:v;
 }
 function fmtBRL(n){if(!n)return '';return (+n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function maskBRL(el){
   if(el._masked)return;el._masked=true;
   el.addEventListener('blur',function(){
     const v=parseBRL(this.value);
-    this.value=v>0?fmtBRL(v):'';
+    if(v>0)this.value=fmtBRL(v);
   });
-  el.addEventListener('focus',function(){
-    const v=parseBRL(this.value);
-    if(v>0)this.value=fmtBRL(v).replace(/\./g,''); // remove thousand sep for easier typing
+  el.addEventListener('focus',function(){this.select();});
+}
+function applyMasks(){
+  document.querySelectorAll('.brl').forEach(el=>{
+    if(!el._masked)maskBRL(el);
   });
 }
-function applyMasks(){document.querySelectorAll('.brl').forEach(el=>{if(!el.dataset.m){el.dataset.m='1';maskBRL(el);}});}
 
 function toast(msg,type='ok'){
   const el=document.createElement('div');el.className='toast';
@@ -545,7 +551,17 @@ function render(){document.getElementById('mlbl').textContent=mname(S.month);rpa
 function pDash(){
   const t=calcTotals();
   const pct=t.tE>0?t.tS/t.tE:0;
-  const mt=macroTotals();
+  // Dashboard mostra apenas os 3 macros originais fixos
+  const mt=(()=>{
+    return DEF_MACROS.map(defMac=>{
+      // Pegar o macro atual do state (pode ter sido renomeado)
+      const mac=getMacros().find(m=>m.id===defMac.id)||defMac;
+      const d=gm();
+      const real=mac.cats.reduce((s,c)=>s+sumCat(d.trans,c),0);
+      const orc=S.orcMacro[mac.id]||0;
+      return{mac,real,orc,saldo:orc-real,over:orc>0&&real>orc};
+    });
+  })();
   const recent=[...gm().trans].sort((a,b)=>new Date(b.data||0)-new Date(a.data||0)).slice(0,6);
   const barCol=pct>.9?'linear-gradient(90deg,var(--red),var(--yellow))':pct>.7?'linear-gradient(90deg,var(--yellow),var(--teal))':'linear-gradient(90deg,var(--green),var(--teal))';
 
@@ -565,8 +581,13 @@ function pDash(){
   </div>
   <div class="kcard" style="--ac:var(--teal)"><div class="kglow" style="background:var(--teal)"></div>
     <div class="kl">📥 A Receber</div>
-    <div class="kv" style="color:var(--teal)">${fmt(sum(gm().receber.filter(r=>r.status!=='pago'),'valor'))}</div>
-    <div class="ks">${gm().receber.filter(r=>r.status!=='pago').length} pendente(s)</div>
+    ${(()=>{
+      const rowsRec=getReceberDoMes();
+      const pendRec=rowsRec.filter(r=>{const st=r.parc?r.parc.status:r.item.status;return st!=='pago';});
+      const totRec=pendRec.reduce((s,r)=>s+(r.parc?r.parc.valor:r.item.valor),0);
+      return`<div class="kv" style="color:var(--teal)">${fmt(totRec)}</div>
+    <div class="ks">${pendRec.length} pendente(s) em ${mname(S.month)}</div>`;
+    })()}
   </div>
   <div class="kcard" style="--ac:${t.saldo>=0?'var(--green)':'var(--red)'}">
     <div class="kglow" style="background:${t.saldo>=0?'var(--green)':'var(--red)'}"></div>
@@ -769,8 +790,9 @@ function getReceberDoMes(m){
   Object.entries(S.data).forEach(([mk,md])=>{
     (md.receber||[]).forEach((item,idx)=>{
       if(!item.parc||item.parc.length===0){
-        // Conta simples: mostrar apenas no mês de cadastro
-        if(mk===mesAtual) result.push({item,idx,mk,parcIdx:null});
+        // Conta simples: aparecer no mês do VENCIMENTO (não do cadastro)
+        const itemMes=item.venc?item.venc.slice(0,7):mk;
+        if(itemMes===mesAtual) result.push({item,idx,mk,parcIdx:null});
       } else {
         // Conta parcelada: mostrar a parcela que vence neste mês
         item.parc.forEach((p,pi)=>{
@@ -791,7 +813,9 @@ function getPagarDoMes(m){
   Object.entries(S.data).forEach(([mk,md])=>{
     (md.pagar||[]).forEach((item,idx)=>{
       if(!item.parc||item.parc.length===0){
-        if(mk===mesAtual) result.push({item,idx,mk,parcIdx:null});
+        // Conta simples: aparecer no mês do VENCIMENTO (não do cadastro)
+        const itemMes=item.venc?item.venc.slice(0,7):mk;
+        if(itemMes===mesAtual) result.push({item,idx,mk,parcIdx:null});
       } else {
         item.parc.forEach((p,pi)=>{
           const pMes=p.venc?p.venc.slice(0,7):mk;
@@ -942,7 +966,7 @@ function openReceber(idx=null){
     <div class="fg">
       <div class="fi s2"><label>Nome / Origem</label><input type="text" id="m-n" value="${x.nome||''}" placeholder="ex: João, Empresa XYZ"/></div>
       <div class="fi s2"><label>Descrição</label><input type="text" id="m-desc" value="${x.desc||''}" placeholder="ex: Serviço prestado, empréstimo…"/></div>
-      <div class="fi"><label>Valor Total (R$)</label><input type="text" id="m-v" value="${x.valor?fmtBRL(x.valor):''}" placeholder="0,00" class="brl"/></div>
+      <div class="fi"><label>Valor Total (R$)</label><input type="number" id="m-v" value="${x.valor||''}" placeholder="0.00" step="0.01" min="0" style="font-family:var(--mo)"/></div>
       <div class="fi"><label>Vencimento</label><input type="date" id="m-venc" value="${x.venc||today}"/></div>
       <div class="fi"><label>Parcelas</label><input type="number" id="m-parc" value="${x.parcelas||1}" min="1" max="60" placeholder="1"/></div>
       <div class="fi"><label>Forma de Recebimento</label><select id="m-forma">
@@ -1041,7 +1065,7 @@ function openPagar(idx=null){
     <div class="fg">
       <div class="fi s2"><label>Nome / Empresa</label><input type="text" id="m-n" value="${x.nome||''}" placeholder="ex: Aluguel, Netflix, João"/></div>
       <div class="fi s2"><label>Descrição</label><input type="text" id="m-desc" value="${x.desc||''}" placeholder="ex: Aluguel março, Empréstimo"/></div>
-      <div class="fi"><label>Valor Total (R$)</label><input type="text" id="m-v" value="${x.valor?fmtBRL(x.valor):''}" placeholder="0,00" class="brl"/></div>
+      <div class="fi"><label>Valor Total (R$)</label><input type="number" id="m-v" value="${x.valor||''}" placeholder="0.00" step="0.01" min="0" style="font-family:var(--mo)"/></div>
       <div class="fi"><label>Vencimento</label><input type="date" id="m-venc" value="${x.venc||today}"/></div>
       <div class="fi"><label>Parcelas</label><input type="number" id="m-parc" value="${x.parcelas||1}" min="1" max="60" placeholder="1"/></div>
       <div class="fi"><label>Forma de Pagamento</label><select id="m-forma">
@@ -1255,12 +1279,19 @@ function pCats(){
   return`
 <div class="ph" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px">
   <div><div class="pt">🗂️ Categorias</div><div class="ps">${allCats.length} categoria(s) em ${macros.length} grupo(s)</div></div>
-  <button class="btn btn-p" onclick="openAddCat()">+ Nova Categoria</button>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn btn-g" onclick="openAddMacro()">+ Novo Grupo</button>
+    <button class="btn btn-p" onclick="openAddCat()">+ Nova Categoria</button>
+  </div>
 </div>
 ${macros.map((mac,mi)=>`
 <div class="sec">
   <div class="sec-h" style="background:linear-gradient(135deg,${mac.hex}12,${mac.hex}06)">
-    <div class="sec-t" style="color:${mac.cor}">${mac.emoji} ${mac.nome}</div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="sec-t" style="color:${mac.cor}">${mac.emoji} ${mac.nome}</div>
+      <button class="btn-ic" title="Editar grupo" onclick="openEditMacro('${mac.id}')">✏️</button>
+      ${S.macros.length>1?`<button class="btn-ic" title="Excluir grupo" onclick="delMacro('${mac.id}')">🗑</button>`:''}
+    </div>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <span style="font-size:.72rem;color:var(--tx3)">Orçamento do grupo:</span>
       <input type="text" placeholder="Sem limite" value="${S.orcMacro[mac.id]?fmtBRL(S.orcMacro[mac.id]):''}"
@@ -1324,6 +1355,93 @@ function setOrcMicro(macId, cat, val, el){
   }
   if(!v||v===0) delete S.orcMicro[cat]; else S.orcMicro[cat]=v;
   save();
+}
+
+
+// ── MACRO MANAGEMENT ──────────────────────────────
+const MACRO_COLORS = ['#5b8dee','#ffd166','#3dd68c','#f06292','#b388ff','#4dd0e1','#ff8a65','#9fa8da'];
+const MACRO_EMOJIS = ['🏠','🎉','📈','🛒','💳','🎯','🏋️','🎸','📚','🐾','✈️','🍔','💊','🎓','💡'];
+
+function openAddMacro(){
+  const cols=MACRO_COLORS;const emojis=MACRO_EMOJIS;
+  openMd('➕ Novo Grupo (Macro Categoria)',`
+    <div class="fg">
+      <div class="fi s2"><label>Nome do Grupo</label><input type="text" id="nm-n" placeholder="ex: Saúde, Educação, Pet…"/></div>
+      <div class="fi"><label>Emoji</label>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">
+          ${emojis.map(e=>`<button onclick="document.getElementById('nm-em').value='${e}';document.querySelectorAll('.nem-b').forEach(b=>b.style.outline='none');this.style.outline='2px solid var(--blue)'" class="nem-b" style="font-size:1.1rem;padding:3px 5px;border-radius:5px;background:var(--sf3);border:1px solid var(--bd);cursor:pointer">${e}</button>`).join('')}
+        </div>
+        <input type="hidden" id="nm-em" value="📦"/>
+      </div>
+      <div class="fi"><label>Cor</label>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
+          ${cols.map(c=>`<button onclick="document.getElementById('nm-cor').value='${c}';document.querySelectorAll('.ncor-b').forEach(b=>b.style.outline='none');this.style.outline='2px solid white'" class="ncor-b" style="width:22px;height:22px;border-radius:50%;background:${c};border:none;cursor:pointer"></button>`).join('')}
+        </div>
+        <input type="hidden" id="nm-cor" value="#5b8dee"/>
+      </div>
+    </div>`,
+  ()=>{
+    const nome=document.getElementById('nm-n').value.trim();
+    if(!nome){toast('Informe o nome','err');return false;}
+    const macros=getMacros();
+    if(macros.find(m=>m.nome.toLowerCase()===nome.toLowerCase())){toast('Grupo já existe','err');return false;}
+    const id='mac_'+uid().slice(0,6);
+    const cor=document.getElementById('nm-cor').value||'#5b8dee';
+    S.macros.push({id,nome,emoji:document.getElementById('nm-em').value||'📦',cor:`var(--blue)`,hex:cor,cats:[]});
+    // Fix cor to use hex directly (not CSS var for custom macros)
+    S.macros[S.macros.length-1].cor=cor;
+    save();toast(`Grupo "${nome}" criado!`);return true;
+  });
+}
+
+function openEditMacro(macId){
+  const macros=getMacros();
+  const mac=macros.find(m=>m.id===macId);
+  if(!mac)return;
+  const cols=MACRO_COLORS;const emojis=MACRO_EMOJIS;
+  openMd(`✏️ Editar Grupo — ${mac.nome}`,`
+    <div class="fg">
+      <div class="fi s2"><label>Nome</label><input type="text" id="em-n" value="${mac.nome}"/></div>
+      <div class="fi"><label>Emoji</label>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">
+          ${emojis.map(e=>`<button onclick="document.getElementById('em-em').value='${e}';document.querySelectorAll('.eem-b').forEach(b=>b.style.outline='none');this.style.outline='2px solid var(--blue)'" class="eem-b" style="font-size:1.1rem;padding:3px 5px;border-radius:5px;background:var(--sf3);border:1px solid var(--bd);cursor:pointer;outline:${mac.emoji===e?'2px solid var(--blue)':'none'}">${e}</button>`).join('')}
+        </div>
+        <input type="hidden" id="em-em" value="${mac.emoji||'📦'}"/>
+      </div>
+      <div class="fi"><label>Cor</label>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
+          ${cols.map(c=>`<button onclick="document.getElementById('em-cor').value='${c}';document.querySelectorAll('.ecor-b').forEach(b=>b.style.outline='none');this.style.outline='2px solid white'" class="ecor-b" style="width:22px;height:22px;border-radius:50%;background:${c};border:none;cursor:pointer;outline:${mac.hex===c?'2px solid white':'none'}"></button>`).join('')}
+        </div>
+        <input type="hidden" id="em-cor" value="${mac.hex||'#5b8dee'}"/>
+      </div>
+    </div>`,
+  ()=>{
+    const nome=document.getElementById('em-n').value.trim();
+    if(!nome){toast('Informe o nome','err');return false;}
+    mac.nome=nome;
+    mac.emoji=document.getElementById('em-em').value||mac.emoji;
+    const cor=document.getElementById('em-cor').value||mac.hex;
+    mac.hex=cor;mac.cor=cor;
+    save();toast(`Grupo "${nome}" atualizado!`);return true;
+  });
+}
+
+function delMacro(macId){
+  const macros=getMacros();
+  const mac=macros.find(m=>m.id===macId);
+  if(!mac)return;
+  if(mac.cats.length>0){
+    if(!confirm(`Excluir o grupo "${mac.nome}"?\n\nAs ${mac.cats.length} categoria(s) dentro dele ficarão sem grupo e serão removidas.`))return;
+    // Remove cats from orcMicro
+    mac.cats.forEach(cat=>delete S.orcMicro[cat]);
+    // Clear from transactions
+    Object.values(S.data).forEach(d=>['trans','pagar','receber'].forEach(l=>(d[l]||[]).forEach(item=>{if(mac.cats.includes(item.categoria))item.categoria='';})));
+  } else {
+    if(!confirm(`Excluir o grupo "${mac.nome}"?`))return;
+  }
+  S.macros=S.macros.filter(m=>m.id!==macId);
+  delete S.orcMacro[macId];
+  save();toast(`Grupo "${mac.nome}" excluído`,'err');go('cats');
 }
 
 // ── CAT MANAGEMENT ────────────────────────────────
