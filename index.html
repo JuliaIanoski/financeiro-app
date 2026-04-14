@@ -783,22 +783,30 @@ function quickAdd(){
 // Retorna todas as contas a receber do mês atual:
 // 1. Contas simples cadastradas neste mês
 // 2. Parcelas de contas parceladas (de qualquer mês) que vencem neste mês
-function getReceberDoMes(m){
-  const mesAtual=m||S.month;
+function _scanContasDoMes(tipo, mesAtual){
+  // Scan ALL months in S.data for items of given type
+  // Items are stored in the month they were CREATED, not their due date
   const result=[];
-  // Scan all months for receber items
+  const seen=new Set(); // avoid duplicates
   Object.entries(S.data).forEach(([mk,md])=>{
-    (md.receber||[]).forEach((item,idx)=>{
+    const list=tipo==='receber'?(md.receber||[]):(md.pagar||[]);
+    list.forEach((item,idx)=>{
+      if(!item)return;
       if(!item.parc||item.parc.length===0){
-        // Conta simples: aparecer no mês do VENCIMENTO (não do cadastro)
+        // Conta simples: show in the vencimento month
         const itemMes=item.venc?item.venc.slice(0,7):mk;
-        if(itemMes===mesAtual) result.push({item,idx,mk,parcIdx:null});
+        if(itemMes===mesAtual){
+          const key=mk+'-'+idx;
+          if(!seen.has(key)){seen.add(key);result.push({item,idx,mk,parcIdx:null,parc:null});}
+        }
       } else {
-        // Conta parcelada: mostrar a parcela que vence neste mês
+        // Parcelada: show each parcela in its own vencimento month
         item.parc.forEach((p,pi)=>{
+          if(!p)return;
           const pMes=p.venc?p.venc.slice(0,7):mk;
           if(pMes===mesAtual){
-            result.push({item,idx,mk,parcIdx:pi,parc:p});
+            const key=mk+'-'+idx+'-'+pi;
+            if(!seen.has(key)){seen.add(key);result.push({item,idx,mk,parcIdx:pi,parc:p});}
           }
         });
       }
@@ -806,28 +814,8 @@ function getReceberDoMes(m){
   });
   return result;
 }
-
-function getPagarDoMes(m){
-  const mesAtual=m||S.month;
-  const result=[];
-  Object.entries(S.data).forEach(([mk,md])=>{
-    (md.pagar||[]).forEach((item,idx)=>{
-      if(!item.parc||item.parc.length===0){
-        // Conta simples: aparecer no mês do VENCIMENTO (não do cadastro)
-        const itemMes=item.venc?item.venc.slice(0,7):mk;
-        if(itemMes===mesAtual) result.push({item,idx,mk,parcIdx:null});
-      } else {
-        item.parc.forEach((p,pi)=>{
-          const pMes=p.venc?p.venc.slice(0,7):mk;
-          if(pMes===mesAtual){
-            result.push({item,idx,mk,parcIdx:pi,parc:p});
-          }
-        });
-      }
-    });
-  });
-  return result;
-}
+function getReceberDoMes(m){return _scanContasDoMes('receber',m||S.month);}
+function getPagarDoMes(m){return _scanContasDoMes('pagar',m||S.month);}
 
 // ══════════════ CONTAS A RECEBER ══════════════════
 function pReceber(){
@@ -865,8 +853,10 @@ function pReceber(){
         ${status!=='pago'
           ?`<button class="btn btn-green btn-sm" onclick="${isParc?`pagarParcela('receber',${idx},${parcIdx},'${mk}')`:`pagarReceber(${idx},'${mk}')`}">✅ Receber</button>`
           :`<button class="btn btn-g btn-sm" onclick="${isParc?`desfazerParcela('receber',${idx},${parcIdx},'${mk}')`:`desfazerReceber(${idx},'${mk}')`}" style="color:var(--yellow);border-color:rgba(255,209,102,.3)">↩️ Desfazer</button>`}
-        <button class="btn-ic" title="Ver/editar parcelas" onclick="verParcelas('receber',${idx},'${mk}')">📋</button>
-        ${!isParc?`<button class="btn-ic" title="Editar" onclick="openReceberEdit('${mk}',${idx})">✏️</button><button class="btn-ic" onclick="rmReceberGlobal('${mk}',${idx})">🗑</button>`:''}
+        <button class="btn-ic" title="Ver todas as parcelas" onclick="verParcelas('receber',${idx},'${mk}')">📋</button>
+        ${!isParc
+          ?`<button class="btn-ic" title="Editar" onclick="openReceberEdit('${mk}',${idx})">✏️</button><button class="btn-ic" title="Excluir lançamento" onclick="rmReceberGlobal('${mk}',${idx})">🗑</button>`
+          :status!=='pago'?`<button class="btn-ic" title="Excluir esta parcela" onclick="delParcela('receber',${idx},${parcIdx},'${mk}')">🗑</button>`:''}
       </td>
     </tr>`;
   }).join('')}</tbody></table>`
@@ -1047,8 +1037,10 @@ function pPagar(){
         ${status!=='pago'
           ?`<button class="btn btn-red btn-sm" onclick="${isParc?`pagarParcela('pagar',${idx},${parcIdx},'${mk}')`:`pagarContaGlobal(${idx},'${mk}')`}">✅ Pagar</button>`
           :`<button class="btn btn-g btn-sm" onclick="${isParc?`desfazerParcela('pagar',${idx},${parcIdx},'${mk}')`:`desfazerPagamento(${idx},'${mk}')`}" style="color:var(--yellow);border-color:rgba(255,209,102,.3)">↩️ Desfazer</button>`}
-        <button class="btn-ic" title="Ver/editar parcelas" onclick="verParcelas('pagar',${idx},'${mk}')">📋</button>
-        ${!isParc?`<button class="btn-ic" title="Editar" onclick="openPagarEdit('${mk}',${idx})">✏️</button><button class="btn-ic" onclick="rmPagarGlobal('${mk}',${idx})">🗑</button>`:''}
+        <button class="btn-ic" title="Ver todas as parcelas" onclick="verParcelas('pagar',${idx},'${mk}')">📋</button>
+        ${!isParc
+          ?`<button class="btn-ic" title="Editar" onclick="openPagarEdit('${mk}',${idx})">✏️</button><button class="btn-ic" title="Excluir lançamento" onclick="rmPagarGlobal('${mk}',${idx})">🗑</button>`
+          :status!=='pago'?`<button class="btn-ic" title="Excluir esta parcela" onclick="delParcela('pagar',${idx},${parcIdx},'${mk}')">🗑</button>`:''}
       </td>
     </tr>`;
   }).join('')}</tbody></table>`
