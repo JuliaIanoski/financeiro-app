@@ -375,11 +375,26 @@ const fmt=n=>'R$ '+(+n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maxim
 function mname(ym){const[y,m]=ym.split('-');return['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][+m-1]+' '+y;}
 const sum=(a,f)=>a.reduce((s,b)=>s+(+b[f]||0),0);
 const sumCat=(arr,cat)=>arr.filter(x=>x.categoria===cat).reduce((s,b)=>s+(+b.valor||0),0);
-function parseBRL(s){if(!s)return 0;s=String(s).trim();if(s.includes(','))s=s.replace(/\./g,'').replace(',','.');return parseFloat(s)||0;}
+function parseBRL(s){
+  if(!s)return 0;
+  s=String(s).trim();
+  // Remove R$ prefix if present
+  s=s.replace(/^R\$\s*/,'').trim();
+  // Handle Brazilian format: 1.234,56 -> 1234.56
+  if(s.includes(','))s=s.replace(/\./g,'').replace(',','.');
+  return parseFloat(s)||0;
+}
 function fmtBRL(n){if(!n)return '';return (+n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function maskBRL(el){
-  el.addEventListener('blur',function(){const v=parseBRL(this.value);if(v>0)this.value=fmtBRL(v);else this.value='';});
-  el.addEventListener('focus',function(){const v=parseBRL(this.value);if(v>0)this.value=String(v).replace('.',',');});
+  if(el._masked)return;el._masked=true;
+  el.addEventListener('blur',function(){
+    const v=parseBRL(this.value);
+    this.value=v>0?fmtBRL(v):'';
+  });
+  el.addEventListener('focus',function(){
+    const v=parseBRL(this.value);
+    if(v>0)this.value=fmtBRL(v).replace(/\./g,''); // remove thousand sep for easier typing
+  });
 }
 function applyMasks(){document.querySelectorAll('.brl').forEach(el=>{if(!el.dataset.m){el.dataset.m='1';maskBRL(el);}});}
 
@@ -623,7 +638,7 @@ function pTrans(){
   // Coletar TODAS as transações do mês: manuais + auto-lançamentos de contas
   const d=gm();
   // saídas: trans
-  let allSaidas=d.trans.map(t=>({...t,_tipo:'saida'}));
+  let allSaidas=d.trans.map((t,i)=>({...t,_tipo:'saida',_idx:i}));
   // entradas: entradas manuais + recebimentos automáticos
   let allEntradas=d.entradas.map(e=>({...e,_tipo:'entrada',valor:e.valor}));
   // juntar tudo
@@ -681,11 +696,11 @@ function pTrans(){
   ${allRows.length?`<table><thead><tr><th>Nome</th><th>Categoria</th><th>Forma</th><th>Data</th><th style="text-align:right">Valor</th><th></th></tr></thead>
   <tbody>${allRows.map((x,i)=>`<tr>
     <td class="nm">${x.nome||'—'}</td>
-    <td>${x.categoria?`<span class="badge bb" style="font-size:.62rem">${x.categoria}</span>`:`<span style="font-size:.65rem;color:var(--tx3);font-style:italic">Sem cat.</span>`}</td>
+    <td>${x.categoria?`<span class="badge bb" style="font-size:.62rem">${x.categoria}</span>`:`<button class="btn btn-g btn-sm" onclick="editCatTrans(${x._idx})" style="font-size:.65rem;color:var(--yellow);padding:2px 7px">+ Categoria</button>`}</td>
     <td>${x.tipo?tbadge(x.tipo):'—'}</td>
     <td style="color:var(--tx3);font-size:.73rem">${x.data||'—'}</td>
     <td class="am" style="color:${x._tipo==='entrada'?'var(--green)':'var(--red)'};font-family:var(--mo)">${x._tipo==='entrada'?'+':'-'} ${fmt(x.valor)}</td>
-    <td>${x._tipo==='saida'?`<button class="btn-ic" onclick="rmTrans(${gm().trans.indexOf(x)})">🗑</button>`:''}</td>
+    <td>${x._tipo==='saida'?`<button class="btn-ic" onclick="rmTrans(${x._idx})">🗑</button><button class="btn-ic" onclick="editCatTrans(${x._idx})" title="Alterar categoria">🏷️</button>`:''}</td>
   </tr>`).join('')}</tbody></table>`
   :'<div class="empty"><div class="empty-icon">🛒</div><div class="empty-txt">Nenhuma transação encontrada.</div></div>'}
   </div>
@@ -714,7 +729,24 @@ function openTrans(idx=null){
     save();toast(`${nome} salvo!`);return true;
   });
 }
-function rmTrans(i){if(!confirm('Remover?'))return;gm().trans.splice(i,1);save();toast('Removido','err');go('trans');}
+function rmTrans(i){
+  if(i<0||i===undefined){toast('Item não encontrado','err');return;}
+  if(!confirm('Remover?'))return;
+  gm().trans.splice(i,1);save();toast('Removido','err');go('trans');
+}
+function editCatTrans(i){
+  if(i<0||i===undefined){toast('Item não encontrado','err');return;}
+  const t=gm().trans[i];if(!t)return;
+  const catOpts=getAllCats().map(c=>`<option ${t.categoria===c?'selected':''}>${c}</option>`).join('');
+  openMd(`🏷️ Categoria — ${t.nome}`,`
+    <div class="fi"><label>Escolha a categoria</label>
+      <select id="ec-cat"><option value="">Sem categoria</option>${catOpts}</select>
+    </div>`,
+  ()=>{
+    gm().trans[i].categoria=document.getElementById('ec-cat').value;
+    save();toast('Categoria atualizada!');return true;
+  });
+}
 function quickAdd(){
   const nome=document.getElementById('qa-n')?.value?.trim();
   const valor=parseBRL(document.getElementById('qa-v')?.value||'');
