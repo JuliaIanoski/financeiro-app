@@ -658,18 +658,23 @@ function pTrans(){
   const fAte=window._fAte||'';
   // Coletar TODAS as transações do mês: manuais + auto-lançamentos de contas
   const d=gm();
-  // saídas: trans
-  let allSaidas=d.trans.map((t,i)=>({...t,_tipo:'saida',_idx:i}));
-  // entradas: entradas manuais + recebimentos automáticos
-  let allEntradas=d.entradas.map(e=>({...e,_tipo:'entrada',valor:e.valor}));
-  // juntar tudo
-  let allRows=[...allSaidas,...allEntradas].sort((a,b)=>new Date(b.data||0)-new Date(a.data||0));
+  // saídas: preservar ordem de inserção (índice original)
+  let allSaidas=d.trans.map((t,i)=>({...t,_tipo:'saida',_idx:i,_order:i}));
+  // entradas: preservar ordem de inserção
+  let allEntradas=d.entradas.map((e,i)=>({...e,_tipo:'entrada',valor:e.valor,_order:d.trans.length+i}));
+  // juntar tudo — ordem de lançamento (mais recente primeiro, mas sem reordenar por data)
+  let allRows=[...allSaidas,...allEntradas].reverse(); // mais recente primeiro
   // aplicar filtros
   if(fCat) allRows=allRows.filter(x=>x.categoria===fCat);
   if(fDe)  allRows=allRows.filter(x=>x.data&&x.data>=fDe);
   if(fAte) allRows=allRows.filter(x=>x.data&&x.data<=fAte);
   const totalSaidas=allRows.filter(x=>x._tipo==='saida').reduce((s,x)=>s+(+x.valor||0),0);
   const totalEntradas=allRows.filter(x=>x._tipo==='entrada').reduce((s,x)=>s+(+x.valor||0),0);
+  // totais por forma de pagamento (só saídas)
+  const porTipo={};
+  allRows.filter(x=>x._tipo==='saida'&&x.tipo).forEach(x=>{
+    porTipo[x.tipo]=(porTipo[x.tipo]||0)+(+x.valor||0);
+  });
   return`
 <div class="ph" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px">
   <div><div class="pt">🛒 Transações</div><div class="ps">${mname(S.month)} · ${allRows.length} item(s)</div></div>
@@ -707,12 +712,25 @@ function pTrans(){
     <input type="date" value="${fAte}" onchange="window._fAte=this.value;go('trans')" style="font-size:.78rem;padding:6px 9px"/>
   </div>
   ${(fCat||fDe||fAte)?`<button class="btn btn-g btn-sm" onclick="window._fCat='';window._fDe='';window._fAte='';go('trans')" style="align-self:flex-end">✕ Limpar</button>`:''}
-  <div style="margin-left:auto;align-self:center;font-size:.75rem;color:var(--tx3)">
+  <div style="margin-left:auto;align-self:center;font-size:.75rem;color:var(--tx3);display:flex;flex-wrap:wrap;gap:10px;align-items:center">
     <span style="color:var(--red);font-family:var(--mo)">↓ ${fmt(totalSaidas)}</span>
-    <span style="margin:0 8px;color:var(--bd2)">|</span>
+    <span style="color:var(--bd2)">|</span>
     <span style="color:var(--green);font-family:var(--mo)">↑ ${fmt(totalEntradas)}</span>
   </div>
 </div>
+<!-- TOTAIS POR FORMA -->
+${Object.keys(porTipo).length?`<div style="background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:12px 18px;margin-bottom:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+  <span style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3)">💳 Por forma de pagamento:</span>
+  ${Object.entries(porTipo).sort((a,b)=>b[1]-a[1]).map(([tipo,total])=>{
+    const card=getCards().find(c=>c.nome===tipo);
+    const cor=card?card.cor:tipo==='Débito'?'var(--blue)':tipo==='PIX'?'var(--green)':tipo==='Dinheiro'?'var(--yellow)':'var(--purple)';
+    return`<div style="display:flex;align-items:center;gap:6px;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);padding:5px 12px">
+      <span style="width:7px;height:7px;border-radius:50%;background:${cor};flex-shrink:0"></span>
+      <span style="font-size:.75rem;font-weight:600;color:var(--tx2)">${tipo}</span>
+      <span style="font-family:var(--mono,var(--mo));font-size:.78rem;font-weight:700;color:var(--red)">- ${fmt(total)}</span>
+    </div>`;
+  }).join('')}
+</div>`:''}
 
 <div class="sec">
   <div class="sec-h"><div class="sec-t">💸 Todos os Lançamentos</div><span style="font-size:.75rem;color:var(--tx3)">${allRows.length} item(s)</span></div>
