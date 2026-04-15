@@ -671,9 +671,12 @@ function pTrans(){
   const totalSaidas=allRows.filter(x=>x._tipo==='saida').reduce((s,x)=>s+(+x.valor||0),0);
   const totalEntradas=allRows.filter(x=>x._tipo==='entrada').reduce((s,x)=>s+(+x.valor||0),0);
   return`
-<div class="ph" style="display:flex;align-items:flex-start;justify-content:space-between">
+<div class="ph" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px">
   <div><div class="pt">🛒 Transações</div><div class="ps">${mname(S.month)} · ${allRows.length} item(s)</div></div>
-  <button class="btn btn-p" onclick="openTrans()">+ Adicionar</button>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn btn-g" onclick="exportTransXLS('${S.month}')" title="Exportar para Excel">📊 Excel</button>
+    <button class="btn btn-p" onclick="openTrans()">+ Adicionar</button>
+  </div>
 </div>
 <div class="qa">
   <div class="qa-t">⚡ Lançamento Rápido</div>
@@ -745,9 +748,16 @@ function openTrans(idx=null){
     const nome=document.getElementById('m-n').value.trim();
     const valor=parseBRL(document.getElementById('m-v').value);
     if(!nome||!valor){toast('Preencha nome e valor','err');return false;}
-    const item={id:uid(),nome,valor,data:document.getElementById('m-d').value,tipo:document.getElementById('m-t').value,categoria:document.getElementById('m-c').value};
+    const cat=document.getElementById('m-c').value;
+    const dataLanc=document.getElementById('m-d').value;
+    const item={id:uid(),nome,valor,data:dataLanc,tipo:document.getElementById('m-t').value,categoria:cat};
     if(idx!==null)gm().trans[idx]=item;else gm().trans.push(item);
-    save();toast(`${nome} salvo!`);return true;
+    save();toast(`${nome} salvo!`);
+    // Se categoria for "Transferências", abre automaticamente Contas a Receber
+    if(cat.toLowerCase().includes('transfer')){
+      setTimeout(()=>openReceberFromTrans(nome,valor,dataLanc),200);
+    }
+    return true;
   });
 }
 function rmTrans(i){
@@ -771,13 +781,64 @@ function editCatTrans(i){
 function quickAdd(){
   const nome=document.getElementById('qa-n')?.value?.trim();
   const valor=parseBRL(document.getElementById('qa-v')?.value||'');
+  const cat=document.getElementById('qa-c')?.value||'';
+  const tipo=document.getElementById('qa-t')?.value||'';
   if(!nome||!valor){toast('Preencha nome e valor','err');return;}
-  gm().trans.push({id:uid(),nome,valor,data:new Date().toISOString().slice(0,10),categoria:document.getElementById('qa-c').value,tipo:document.getElementById('qa-t').value});
+  const today=new Date().toISOString().slice(0,10);
+  gm().trans.push({id:uid(),nome,valor,data:today,categoria:cat,tipo});
   save();toast(`${nome} adicionado!`);
   document.getElementById('qa-n').value='';document.getElementById('qa-v').value='';
+  // Se categoria for "Transferências", abre automaticamente Contas a Receber
+  if(cat.toLowerCase().includes('transfer')){
+    toast('Abrindo Contas a Receber... 📥','warn');
+    setTimeout(()=>openReceberFromTrans(nome,valor,today),300);
+    return;
+  }
   go('trans');
 }
 
+
+// ══════════════ EXPORT EXCEL ═════════════════════
+function exportTransXLS(mes){
+  const d=gm(mes);
+  const saidas=d.trans.map(t=>({
+    Tipo:'Saída',Nome:t.nome||'',Categoria:t.categoria||'Sem categoria',
+    Forma:t.tipo||'',Data:t.data||'',Valor:-(+t.valor||0)
+  }));
+  const entradas=d.entradas.map(e=>({
+    Tipo:'Entrada',Nome:e.nome||'',Categoria:e.categoria||'',
+    Forma:e.tipo||'',Data:e.data||'',Valor:+(+e.valor||0)
+  }));
+  const rows=[...saidas,...entradas].sort((a,b)=>new Date(b.Data||0)-new Date(a.Data||0));
+  if(!rows.length){toast('Nenhuma transação para exportar','err');return;}
+
+  // Build CSV with BOM for Excel UTF-8
+  const headers=['Tipo','Nome','Categoria','Forma','Data','Valor'];
+  const csvRows=[headers.join(';')];
+  rows.forEach(r=>{
+    csvRows.push(headers.map(h=>{
+      let v=r[h]??'';
+      if(typeof v==='number')v=v.toFixed(2).replace('.',',');
+      v=String(v).replace(/"/g,'""');
+      return `"${v}"`;
+    }).join(';'));
+  });
+  // Add summary at bottom
+  csvRows.push('');
+  csvRows.push(`"Total Saídas";"${rows.filter(r=>r.Tipo==='Saída').reduce((s,r)=>s+Math.abs(r.Valor),0).toFixed(2).replace('.',',')}"`);
+  csvRows.push(`"Total Entradas";"${rows.filter(r=>r.Tipo==='Entrada').reduce((s,r)=>s+r.Valor,0).toFixed(2).replace('.',',')}"`);
+
+  const bom='﻿';
+  const blob=new Blob([bom+csvRows.join('
+')],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`transacoes_${mes||S.month}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Exportado! Abra no Excel ✅');
+}
 
 // ══════════════ PARCELAS HELPERS ═════════════════
 // Retorna todas as contas a receber do mês atual:
@@ -947,6 +1008,57 @@ function pagarContaGlobal(idx,mk){
   if(r){r.status='pago';if(!md.entradas)md.entradas=[];md.entradas.push({id:uid(),nome:`[Recebido] ${r.nome}`,valor:r.valor,data:new Date().toISOString().slice(0,10),tipo:r.forma||'—'});save();toast(`${r.nome} recebido! ✅`);go('receber');return;}
   const p=md.pagar?md.pagar[idx]:null;
   if(p){p.status='pago';if(!md.trans)md.trans=[];md.trans.push({id:uid(),nome:`[Pago] ${p.nome}`,valor:p.valor,data:new Date().toISOString().slice(0,10),tipo:p.forma||'—',categoria:p.categoria||''});save();toast(`${p.nome} pago! ✅`);go('pagar');}
+}
+
+// Abre modal de Contas a Receber pré-preenchido a partir de uma transação
+function openReceberFromTrans(nome, valor, data){
+  const today=data||new Date().toISOString().slice(0,10);
+  openMd('📥 Lançar em Contas a Receber',`
+    <div style="background:var(--sf2);border:1px solid rgba(91,141,238,.2);border-radius:var(--rs);padding:10px 14px;margin-bottom:14px;font-size:.78rem;color:var(--tx3)">
+      💡 Transferência detectada! Preencha os dados para lançar em <strong style="color:var(--green)">Contas a Receber</strong>.
+    </div>
+    <div class="fg">
+      <div class="fi s2"><label>Nome / Origem</label><input type="text" id="rfr-n" value="${nome||''}" placeholder="Quem vai te pagar?"/></div>
+      <div class="fi s2"><label>Descrição</label><input type="text" id="rfr-desc" placeholder="ex: Transferência, reembolso…"/></div>
+      <div class="fi"><label>Valor (R$)</label><input type="number" id="rfr-v" value="${valor||''}" step="0.01" min="0" style="font-family:var(--mo)"/></div>
+      <div class="fi"><label>Vencimento</label><input type="date" id="rfr-venc" value="${today}"/></div>
+      <div class="fi"><label>Parcelas</label><input type="number" id="rfr-parc" value="1" min="1" max="60"/></div>
+      <div class="fi"><label>Forma de Recebimento</label><select id="rfr-forma">
+        <option value="">—</option>${['PIX','Transferência','Dinheiro','Cheque','Outros'].map(f=>`<option>${f}</option>`).join('')}
+      </select></div>
+      <div class="fi"><label>Categoria</label><select id="rfr-cat">
+        <option value="">—</option>${getAllCats().map(c=>`<option>${c}</option>`).join('')}
+      </select></div>
+      <div class="fi s2"><label>Observações</label><textarea id="rfr-obs" placeholder="Opcional…"></textarea></div>
+    </div>`,
+  ()=>{
+    const nome2=document.getElementById('rfr-n').value.trim();
+    const valor2=parseBRL(document.getElementById('rfr-v').value);
+    if(!nome2||!valor2){toast('Preencha nome e valor','err');return false;}
+    const parcelas=parseInt(document.getElementById('rfr-parc').value)||1;
+    const venc=document.getElementById('rfr-venc').value;
+    const itemId=uid();
+    const item={id:itemId,nome:nome2,valor:valor2,
+      desc:document.getElementById('rfr-desc').value.trim(),
+      venc,parcelas,
+      forma:document.getElementById('rfr-forma').value,
+      categoria:document.getElementById('rfr-cat').value,
+      obs:document.getElementById('rfr-obs').value.trim(),
+      status:'pendente'};
+    if(parcelas>1){
+      item.parc=[];
+      const vBase=new Date(venc+'T00:00:00');
+      const vPart=+(valor2/parcelas).toFixed(2);
+      for(let p=0;p<parcelas;p++){
+        const d=new Date(vBase);d.setMonth(d.getMonth()+p);
+        const pVenc=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        item.parc.push({num:p+1,valor:vPart,venc:pVenc,status:'pendente'});
+      }
+    }
+    gm().receber.push(item);
+    save();toast(`${nome2} lançado em Contas a Receber! ✅`);
+    return true;
+  });
 }
 
 function openReceber(idx=null){
