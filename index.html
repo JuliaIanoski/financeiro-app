@@ -802,7 +802,7 @@ function quickAdd(){
 function exportTransXLS(mes){
   const d=gm(mes);
   const saidas=d.trans.map(t=>({
-    Tipo:'Saída',Nome:t.nome||'',Categoria:t.categoria||'Sem categoria',
+    Tipo:'Saida',Nome:t.nome||'',Categoria:t.categoria||'Sem categoria',
     Forma:t.tipo||'',Data:t.data||'',Valor:-(+t.valor||0)
   }));
   const entradas=d.entradas.map(e=>({
@@ -810,34 +810,33 @@ function exportTransXLS(mes){
     Forma:e.tipo||'',Data:e.data||'',Valor:+(+e.valor||0)
   }));
   const rows=[...saidas,...entradas].sort((a,b)=>new Date(b.Data||0)-new Date(a.Data||0));
-  if(!rows.length){toast('Nenhuma transação para exportar','err');return;}
-
-  // Build CSV with BOM for Excel UTF-8
+  if(!rows.length){toast('Nenhuma transacao para exportar','err');return;}
   const headers=['Tipo','Nome','Categoria','Forma','Data','Valor'];
-  const csvRows=[headers.join(';')];
+  const sep=';';
+  const csvRows=[headers.join(sep)];
   rows.forEach(r=>{
     csvRows.push(headers.map(h=>{
-      let v=r[h]??'';
+      let v=r[h]!=null?r[h]:'';
       if(typeof v==='number')v=v.toFixed(2).replace('.',',');
       v=String(v).replace(/"/g,'""');
-      return `"${v}"`;
-    }).join(';'));
+      return '"'+v+'"';
+    }).join(sep));
   });
-  // Add summary at bottom
+  const totS=rows.filter(r=>r.Tipo==='Saida').reduce((s,r)=>s+Math.abs(r.Valor),0);
+  const totE=rows.filter(r=>r.Tipo==='Entrada').reduce((s,r)=>s+r.Valor,0);
   csvRows.push('');
-  csvRows.push(`"Total Saídas";"${rows.filter(r=>r.Tipo==='Saída').reduce((s,r)=>s+Math.abs(r.Valor),0).toFixed(2).replace('.',',')}"`);
-  csvRows.push(`"Total Entradas";"${rows.filter(r=>r.Tipo==='Entrada').reduce((s,r)=>s+r.Valor,0).toFixed(2).replace('.',',')}"`);
-
-  const bom='﻿';
-  const blob=new Blob([bom+csvRows.join('
-')],{type:'text/csv;charset=utf-8;'});
+  csvRows.push('"Total Saidas";"'+totS.toFixed(2).replace('.',',')+'"');
+  csvRows.push('"Total Entradas";"'+totE.toFixed(2).replace('.',',')+'"');
+  const bom='\uFEFF';
+  const nl='\r\n';
+  const blob=new Blob([bom+csvRows.join(nl)],{type:'text/csv;charset=utf-8;'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
   a.href=url;
-  a.download=`transacoes_${mes||S.month}.csv`;
+  a.download='transacoes_'+(mes||S.month)+'.csv';
   a.click();
   URL.revokeObjectURL(url);
-  toast('Exportado! Abra no Excel ✅');
+  toast('Exportado! Abra no Excel');
 }
 
 // ══════════════ PARCELAS HELPERS ═════════════════
