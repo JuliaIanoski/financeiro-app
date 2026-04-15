@@ -1377,19 +1377,30 @@ function desfazerPagamento(idx,mk){
 function delParcela(tipo,idx,pi,itemMonth){
   if(!confirm('Excluir esta parcela?'))return;
   const mKey=itemMonth||S.month;
-  const md=S.data[mKey];
+  // Search in ALL months if mKey not found or doesn't have the item
+  let md=S.data[mKey];
+  let foundMk=mKey;
+  // If not found in given month, scan all months
+  if(!md||!((md[tipo==='receber'?'receber':'pagar']||[])[idx])){
+    for(const [k,v] of Object.entries(S.data)){
+      const list=v[tipo==='receber'?'receber':'pagar']||[];
+      if(list[idx]&&list[idx].parc){md=v;foundMk=k;break;}
+    }
+  }
   if(!md){toast('Mês não encontrado','err');return;}
   const list=tipo==='receber'?(md.receber||[]):(md.pagar||[]);
   const item=list[idx];
-  if(!item||!item.parc){toast('Item não encontrado','err');return;}
+  if(!item){toast('Item não encontrado','err');return;}
+  if(!item.parc||!item.parc[pi]){toast('Parcela não encontrada','err');return;}
   item.parc.splice(pi,1);
-  // renumber remaining parcelas
   item.parc.forEach((p,i)=>p.num=i+1);
   item.parcelas=item.parc.length;
-  // if no parcelas left, treat as simple item
   if(item.parc.length===0){delete item.parc;item.parcelas=1;}
-  save();toast('Parcela removida','err');
-  closeM();setTimeout(()=>go(tipo==='receber'?'receber':'pagar'),100);
+  save();
+  toast(`Parcela removida!`,'err');
+  // Close modal if open, then navigate
+  if(_mdStack.length>0)closeM();
+  setTimeout(()=>go(tipo==='receber'?'receber':'pagar'),150);
 }
 
 // ══════════════ CATEGORIAS ════════════════════════
