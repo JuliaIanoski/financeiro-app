@@ -862,29 +862,26 @@ function exportTransXLS(mes){
 // 1. Contas simples cadastradas neste mês
 // 2. Parcelas de contas parceladas (de qualquer mês) que vencem neste mês
 function _scanContasDoMes(tipo, mesAtual){
-  // Scan ALL months in S.data for items of given type
-  // Items are stored in the month they were CREATED, not their due date
   const result=[];
-  const seen=new Set(); // avoid duplicates
+  const seen=new Set();
   Object.entries(S.data).forEach(([mk,md])=>{
     const list=tipo==='receber'?(md.receber||[]):(md.pagar||[]);
     list.forEach((item,idx)=>{
       if(!item)return;
+      const itemId=item.id||mk+'-'+idx; // use id as unique key
       if(!item.parc||item.parc.length===0){
-        // Conta simples: show in the vencimento month
         const itemMes=item.venc?item.venc.slice(0,7):mk;
         if(itemMes===mesAtual){
-          const key=mk+'-'+idx;
-          if(!seen.has(key)){seen.add(key);result.push({item,idx,mk,parcIdx:null,parc:null});}
+          const key=itemId;
+          if(!seen.has(key)){seen.add(key);result.push({item,idx,mk,itemId,parcIdx:null,parc:null});}
         }
       } else {
-        // Parcelada: show each parcela in its own vencimento month
         item.parc.forEach((p,pi)=>{
           if(!p)return;
           const pMes=p.venc?p.venc.slice(0,7):mk;
           if(pMes===mesAtual){
-            const key=mk+'-'+idx+'-'+pi;
-            if(!seen.has(key)){seen.add(key);result.push({item,idx,mk,parcIdx:pi,parc:p});}
+            const key=itemId+'-'+pi;
+            if(!seen.has(key)){seen.add(key);result.push({item,idx,mk,itemId,parcIdx:pi,parc:p});}
           }
         });
       }
@@ -894,6 +891,16 @@ function _scanContasDoMes(tipo, mesAtual){
 }
 function getReceberDoMes(m){return _scanContasDoMes('receber',m||S.month);}
 function getPagarDoMes(m){return _scanContasDoMes('pagar',m||S.month);}
+
+// Find item by id across all months
+function _findItemById(tipo, itemId){
+  for(const [mk,md] of Object.entries(S.data)){
+    const list=tipo==='receber'?(md.receber||[]):(md.pagar||[]);
+    const idx=list.findIndex(it=>it&&it.id===itemId);
+    if(idx>=0)return{item:list[idx],idx,mk};
+  }
+  return null;
+}
 
 // ══════════════ CONTAS A RECEBER ══════════════════
 function pReceber(){
@@ -929,12 +936,12 @@ function pReceber(){
       <td class="am" style="color:var(--green)">${fmt(valor)}</td>
       <td style="display:flex;gap:4px;flex-wrap:wrap">
         ${status!=='pago'
-          ?`<button class="btn btn-green btn-sm" onclick="${isParc?`pagarParcela('receber',${idx},${parcIdx},'${mk}')`:`pagarReceber(${idx},'${mk}')`}">✅ Receber</button>`
+          ?`<button class="btn btn-green btn-sm" onclick="${isParc?`openPagarModal('receber','${item.id||mk+"-"+idx}',${parcIdx},'${mk}')`:`openPagarModal('recebersimples','${item.id||mk+"-"+idx}',null,'${mk}')`}">✅ Receber</button>`
           :`<button class="btn btn-g btn-sm" onclick="${isParc?`desfazerParcela('receber',${idx},${parcIdx},'${mk}')`:`desfazerReceber(${idx},'${mk}')`}" style="color:var(--yellow);border-color:rgba(255,209,102,.3)">↩️ Desfazer</button>`}
         <button class="btn-ic" title="Ver todas as parcelas" onclick="verParcelas('receber',${idx},'${mk}')">📋</button>
         ${!isParc
           ?`<button class="btn-ic" title="Editar" onclick="openReceberEdit('${mk}',${idx})">✏️</button><button class="btn-ic" title="Excluir lançamento" onclick="rmReceberGlobal('${mk}',${idx})">🗑</button>`
-          :status!=='pago'?`<button class="btn-ic" title="Excluir esta parcela" onclick="delParcela('receber',${idx},${parcIdx},'${mk}')">🗑</button>`:''}
+          :status!=='pago'?`<button class="btn-ic" title="Excluir esta parcela" onclick="delParcelaById('receber','${item.id||mk+'-'+idx}',${parcIdx})">🗑</button>`:''}
       </td>
     </tr>`;
   }).join('')}</tbody></table>`
@@ -1164,12 +1171,12 @@ function pPagar(){
       <td class="am" style="color:var(--red)">${fmt(valor)}</td>
       <td style="display:flex;gap:4px;flex-wrap:wrap">
         ${status!=='pago'
-          ?`<button class="btn btn-red btn-sm" onclick="${isParc?`pagarParcela('pagar',${idx},${parcIdx},'${mk}')`:`pagarContaGlobal(${idx},'${mk}')`}">✅ Pagar</button>`
+          ?`<button class="btn btn-red btn-sm" onclick="${isParc?`openPagarModal('pagar','${item.id||mk+"-"+idx}',${parcIdx},'${mk}')`:`openPagarModal('pagarsimples','${item.id||mk+"-"+idx}',null,'${mk}')`}">✅ Pagar</button>`
           :`<button class="btn btn-g btn-sm" onclick="${isParc?`desfazerParcela('pagar',${idx},${parcIdx},'${mk}')`:`desfazerPagamento(${idx},'${mk}')`}" style="color:var(--yellow);border-color:rgba(255,209,102,.3)">↩️ Desfazer</button>`}
         <button class="btn-ic" title="Ver todas as parcelas" onclick="verParcelas('pagar',${idx},'${mk}')">📋</button>
         ${!isParc
           ?`<button class="btn-ic" title="Editar" onclick="openPagarEdit('${mk}',${idx})">✏️</button><button class="btn-ic" title="Excluir lançamento" onclick="rmPagarGlobal('${mk}',${idx})">🗑</button>`
-          :status!=='pago'?`<button class="btn-ic" title="Excluir esta parcela" onclick="delParcela('pagar',${idx},${parcIdx},'${mk}')">🗑</button>`:''}
+          :status!=='pago'?`<button class="btn-ic" title="Excluir esta parcela" onclick="delParcelaById('pagar','${item.id||mk+'-'+idx}',${parcIdx})">🗑</button>`:''}
       </td>
     </tr>`;
   }).join('')}</tbody></table>`
@@ -1372,6 +1379,93 @@ function desfazerPagamento(idx,mk){
   const nome=`[Pago] ${p.nome}`;
   if(md.trans)md.trans=md.trans.filter(t=>t.nome!==nome||Math.abs(t.valor-p.valor)>0.01);
   save();toast(`${p.nome} voltou para pendente ↩️`,'warn');go('pagar');
+}
+
+// ── Excluir parcela por ID (robusto) ─────────────
+function delParcelaById(tipo, itemId, pi){
+  if(!confirm('Excluir esta parcela?'))return;
+  const found=_findItemById(tipo, itemId);
+  if(!found){toast('Item não encontrado','err');return;}
+  const{item,idx,mk}=found;
+  if(!item.parc||!item.parc[pi]){toast('Parcela não encontrada','err');return;}
+  item.parc.splice(pi,1);
+  item.parc.forEach((p,i)=>p.num=i+1);
+  item.parcelas=item.parc.length;
+  if(item.parc.length===0){delete item.parc;item.parcelas=1;}
+  save();toast('Parcela removida!','err');
+  if(_mdStack.length>0)closeM();
+  go(tipo==='receber'?'receber':'pagar');
+}
+
+// ── Modal de confirmação de pagamento com método ──
+function openPagarModal(tipo, itemId, pi, mk){
+  // tipo: 'pagar' (parcela), 'pagarsimples', 'receber' (parcela), 'recebersimples'
+  const isRec=tipo.startsWith('receber');
+  const tipoBase=isRec?'receber':'pagar';
+  const found=_findItemById(tipoBase, itemId);
+  if(!found){toast('Item não encontrado','err');return;}
+  const{item,idx}=found;
+  const isParc=pi!==null&&pi!==undefined&&pi!=='null';
+  const parc=isParc?item.parc[pi]:null;
+  const valor=isParc?parc.valor:item.valor;
+  const nome=item.nome;
+  const formaAtual=item.forma||'';
+  const tipos=getTipos();
+  openMd(`${isRec?'✅ Confirmar Recebimento':'✅ Confirmar Pagamento'}`,`
+    <div style="background:var(--sf2);border-radius:var(--rs);padding:12px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-weight:700;font-size:.9rem">${nome}</div>
+        ${isParc?`<div style="font-size:.73rem;color:var(--tx3);margin-top:2px">Parcela ${parc.num}/${item.parcelas}</div>`:''}
+      </div>
+      <div style="font-family:var(--mo);font-size:1.1rem;font-weight:700;color:${isRec?'var(--green)':'var(--red)'}">
+        ${isRec?'+':'-'} ${fmt(valor)}
+      </div>
+    </div>
+    <div class="fi">
+      <label>Forma de ${isRec?'Recebimento':'Pagamento'}</label>
+      <select id="pm-forma" style="font-size:.85rem">
+        <option value="">— Selecione —</option>
+        ${tipos.map(t=>`<option value="${t}" ${t===formaAtual?'selected':''}>${t}</option>`).join('')}
+      </select>
+    </div>
+    <div class="fi" style="margin-top:10px">
+      <label>Data</label>
+      <input type="date" id="pm-data" value="${new Date().toISOString().slice(0,10)}"/>
+    </div>`,
+  ()=>{
+    const forma=document.getElementById('pm-forma').value;
+    const dataP=document.getElementById('pm-data').value;
+    if(!forma){toast('Selecione a forma de pagamento','err');return false;}
+    const{item:it,idx:ix,mk:mKey}=_findItemById(tipoBase,itemId);
+    const md=S.data[mKey];
+    if(isParc){
+      const p=it.parc[pi];
+      p.status='pago';
+      p.forma=forma;
+      const pMes=p.venc?p.venc.slice(0,7):mKey;
+      if(!S.data[pMes])S.data[pMes]={trans:[],entradas:[],receber:[],pagar:[]};
+      const mPago=S.data[pMes];
+      if(isRec){
+        if(!mPago.entradas)mPago.entradas=[];
+        mPago.entradas.push({id:uid(),nome:`[${p.num}/${it.parcelas}] ${it.nome}`,valor:p.valor,data:dataP,tipo:forma,categoria:it.categoria||''});
+      } else {
+        if(!mPago.trans)mPago.trans=[];
+        mPago.trans.push({id:uid(),nome:`[${p.num}/${it.parcelas}] ${it.nome}`,valor:p.valor,data:dataP,tipo:forma,categoria:it.categoria||''});
+      }
+      if(it.parc.every(p=>p.status==='pago'))it.status='pago';
+    } else {
+      it.status='pago';it.forma=forma;
+      if(isRec){
+        if(!md.entradas)md.entradas=[];
+        md.entradas.push({id:uid(),nome:`[Recebido] ${it.nome}`,valor:it.valor,data:dataP,tipo:forma,categoria:it.categoria||''});
+      } else {
+        if(!md.trans)md.trans=[];
+        md.trans.push({id:uid(),nome:`[Pago] ${it.nome}`,valor:it.valor,data:dataP,tipo:forma,categoria:it.categoria||''});
+      }
+    }
+    save();toast(`${nome} ${isRec?'recebido':'pago'}! ✅`);
+    return true;
+  });
 }
 
 function delParcela(tipo,idx,pi,itemMonth){
