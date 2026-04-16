@@ -348,9 +348,11 @@ function gm(m){
 }
 
 function save(){
+  S._ts=Date.now(); // update timestamp immediately so onSnapshot doesn't overwrite
+  window._localWrite=Date.now(); // lock: ignore remote snapshots for 2s
   localStorage.setItem('fin_v4',JSON.stringify(S));
   clearTimeout(window._saveT);
-  window._saveT=setTimeout(cloudSave,900);
+  window._saveT=setTimeout(cloudSave,800);
 }
 function load(){
   try{
@@ -515,11 +517,14 @@ function startSync(){
   unsubSync=onSnapshot(ref,snap=>{
     if(snap.exists()){
       const r=snap.data();
-      if(r&&r._ts&&r._ts>S._ts){
+      // Only overwrite local data if remote is newer AND no recent local write (2s lock)
+      const localWriteAge=Date.now()-(window._localWrite||0);
+      if(r&&r._ts&&r._ts>S._ts&&localWriteAge>2000){
         S.data=r.data||S.data;S.cards=r.cards||S.cards;
         S.orcMacro=r.orcMacro||S.orcMacro;S.orcMicro=r.orcMicro||S.orcMicro;
         S.metas=r.metas||S.metas;S.macros=r.macros||S.macros;S._ts=r._ts;
-        save();render();
+        localStorage.setItem('fin_v4',JSON.stringify(S));
+        render();
       }
     }
     setSyncDot('ok');
