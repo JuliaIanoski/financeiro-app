@@ -1748,16 +1748,23 @@ function pCards(){
   const cards=getCards();
   return`
 <div class="ph" style="display:flex;align-items:flex-start;justify-content:space-between">
-  <div><div class="pt">🃏 Meus Cartões</div><div class="ps">${cards.length} cartão(ões)</div></div>
+  <div><div class="pt">🃏 Meus Cartões</div><div class="ps">${cards.length} cartão(ões) · ${mname(S.month)}</div></div>
   <button class="btn btn-p" onclick="openCard()">+ Novo Cartão</button>
 </div>
-<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-bottom:20px">
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-bottom:20px">
 ${cards.map((card,i)=>{
-  const tot=sum(gm().trans.filter(t=>t.tipo===card.nome),'valor');
+  const d=gm();
+  // Gastos: transações com esse cartão
+  const gastos=sum(d.trans.filter(t=>t.tipo===card.nome),'valor');
+  // Recebimentos: entradas com esse cartão como tipo
+  const recebimentos=sum((d.entradas||[]).filter(e=>e.tipo===card.nome),'valor');
+  // Saldo = recebimentos - gastos
+  const saldo=recebimentos-gastos;
+  const saldoCol=saldo>=0?'var(--green)':'var(--red)';
   return`<div style="background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:18px;position:relative;overflow:hidden;transition:var(--tr)"
     onmouseenter="this.style.borderColor='var(--bd2)'" onmouseleave="this.style.borderColor='var(--bd)'">
     <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${card.cor}"></div>
-    <div style="display:flex;justify-content:space-between;margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;margin-bottom:14px">
       <div>
         <div style="font-weight:700;font-size:.9rem">${card.nome}</div>
         ${card.banco?`<div style="font-size:.72rem;color:var(--tx3);margin-top:2px">${card.banco}</div>`:''}
@@ -1767,10 +1774,20 @@ ${cards.map((card,i)=>{
         ${cards.length>1?`<button class="btn-ic" onclick="rmCard(${i})">🗑</button>`:''}
       </div>
     </div>
-    <div style="display:flex;align-items:center;gap:7px">
-      <span style="width:8px;height:8px;border-radius:50%;background:${card.cor}"></span>
-      <span style="font-size:.7rem;color:var(--tx3)">Gasto este mês:</span>
-      <span style="font-family:var(--mo);font-size:.82rem;font-weight:600;color:${tot>0?'var(--red)':'var(--tx3)'}">${tot>0?fmt(tot):'—'}</span>
+    <div style="display:flex;flex-direction:column;gap:7px">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:.7rem;color:var(--tx3)">💸 Gastos este mês</span>
+        <span style="font-family:var(--mo);font-size:.82rem;font-weight:600;color:${gastos>0?'var(--red)':'var(--tx3)'}">${gastos>0?'- '+fmt(gastos):'—'}</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:.7rem;color:var(--tx3)">💵 Recebimentos</span>
+        <span style="font-family:var(--mo);font-size:.82rem;font-weight:600;color:${recebimentos>0?'var(--green)':'var(--tx3)'}">${recebimentos>0?'+ '+fmt(recebimentos):'—'}</span>
+      </div>
+      <div style="height:1px;background:var(--bd);margin:2px 0"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:.75rem;font-weight:600;color:var(--tx2)">💰 Saldo</span>
+        <span style="font-family:var(--mo);font-size:.95rem;font-weight:700;color:${saldoCol}">${(gastos>0||recebimentos>0)?fmt(saldo):'—'}</span>
+      </div>
     </div>
   </div>`;
 }).join('')}
