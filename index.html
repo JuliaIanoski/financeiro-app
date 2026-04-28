@@ -661,25 +661,36 @@ function pTrans(){
   const fCat=window._fCat||'';
   const fDe=window._fDe||'';
   const fAte=window._fAte||'';
-  // Coletar TODAS as transações do mês: manuais + auto-lançamentos de contas
+  const fTipo=window._fTipo||'';
+  const fNome=window._fNome||'';
+  if(!window._selTrans)window._selTrans=new Set();
+  const sel=window._selTrans;
+
   const d=gm();
-  // saídas: preservar ordem de inserção (índice original)
   let allSaidas=d.trans.map((t,i)=>({...t,_tipo:'saida',_idx:i,_order:i}));
-  // entradas: preservar ordem de inserção
   let allEntradas=d.entradas.map((e,i)=>({...e,_tipo:'entrada',valor:e.valor,_order:d.trans.length+i}));
-  // juntar tudo — ordem de lançamento (mais recente primeiro, mas sem reordenar por data)
-  let allRows=[...allSaidas,...allEntradas].reverse(); // mais recente primeiro
-  // aplicar filtros
-  if(fCat) allRows=allRows.filter(x=>x.categoria===fCat);
-  if(fDe)  allRows=allRows.filter(x=>x.data&&x.data>=fDe);
-  if(fAte) allRows=allRows.filter(x=>x.data&&x.data<=fAte);
+  let allRows=[...allSaidas,...allEntradas].reverse();
+
+  // Aplicar filtros
+  if(fCat)  allRows=allRows.filter(x=>x.categoria===fCat);
+  if(fTipo) allRows=allRows.filter(x=>x.tipo===fTipo);
+  if(fDe)   allRows=allRows.filter(x=>x.data&&x.data>=fDe);
+  if(fAte)  allRows=allRows.filter(x=>x.data&&x.data<=fAte);
+  if(fNome) allRows=allRows.filter(x=>(x.nome||'').toLowerCase().includes(fNome.toLowerCase()));
+
   const totalSaidas=allRows.filter(x=>x._tipo==='saida').reduce((s,x)=>s+(+x.valor||0),0);
   const totalEntradas=allRows.filter(x=>x._tipo==='entrada').reduce((s,x)=>s+(+x.valor||0),0);
-  // totais por forma de pagamento (só saídas)
   const porTipo={};
-  allRows.filter(x=>x._tipo==='saida'&&x.tipo).forEach(x=>{
-    porTipo[x.tipo]=(porTipo[x.tipo]||0)+(+x.valor||0);
-  });
+  allRows.filter(x=>x._tipo==='saida'&&x.tipo).forEach(x=>{porTipo[x.tipo]=(porTipo[x.tipo]||0)+(+x.valor||0);});
+
+  // Selecionados
+  const selIds=sel?[...sel]:[];
+  const selRows=allRows.filter(x=>sel.has(x.id||x._order+''));
+  const selTotal=selRows.reduce((s,x)=>s+(+x.valor||0),0);
+  const allIds=allRows.map(x=>x.id||x._order+'');
+  const allSel=allIds.length>0&&allIds.every(id=>sel.has(id));
+  const hasFilter=fCat||fDe||fAte||fTipo||fNome;
+
   return`
 <div class="ph" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px">
   <div><div class="pt">🛒 Transações</div><div class="ps">${mname(S.month)} · ${allRows.length} item(s)</div></div>
@@ -700,58 +711,112 @@ function pTrans(){
 </div>
 
 <!-- FILTROS -->
-<div style="background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:14px 18px;margin-bottom:16px;display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
-  <div style="font-size:.72rem;font-weight:600;color:var(--blue);align-self:center">🔍 Filtros</div>
-  <div class="cfi" style="min-width:140px">
-    <label>Categoria</label>
-    <select onchange="window._fCat=this.value;go('trans')" style="font-size:.78rem;padding:6px 9px">
-      <option value="">Todas</option>${catOpts}
-    </select>
+<div style="background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:14px 18px;margin-bottom:10px">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+    <span style="font-size:.72rem;font-weight:700;color:var(--blue)">🔍 Filtros</span>
+    ${hasFilter?`<button class="btn btn-g btn-sm" onclick="window._fCat='';window._fDe='';window._fAte='';window._fTipo='';window._fNome='';window._selTrans=new Set();go('trans')">✕ Limpar tudo</button>`:''}
   </div>
-  <div class="cfi">
-    <label>De</label>
-    <input type="date" value="${fDe}" onchange="window._fDe=this.value;go('trans')" style="font-size:.78rem;padding:6px 9px"/>
-  </div>
-  <div class="cfi">
-    <label>Até</label>
-    <input type="date" value="${fAte}" onchange="window._fAte=this.value;go('trans')" style="font-size:.78rem;padding:6px 9px"/>
-  </div>
-  ${(fCat||fDe||fAte)?`<button class="btn btn-g btn-sm" onclick="window._fCat='';window._fDe='';window._fAte='';go('trans')" style="align-self:flex-end">✕ Limpar</button>`:''}
-  <div style="margin-left:auto;align-self:center;font-size:.75rem;color:var(--tx3);display:flex;flex-wrap:wrap;gap:10px;align-items:center">
-    <span style="color:var(--red);font-family:var(--mo)">↓ ${fmt(totalSaidas)}</span>
-    <span style="color:var(--bd2)">|</span>
-    <span style="color:var(--green);font-family:var(--mo)">↑ ${fmt(totalEntradas)}</span>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;align-items:end">
+    <div class="cfi">
+      <label>🔤 Buscar nome</label>
+      <input type="text" placeholder="Digite para buscar…" value="${fNome}"
+        oninput="window._fNome=this.value;go('trans')"
+        style="font-size:.78rem;padding:6px 9px"/>
+    </div>
+    <div class="cfi">
+      <label>🗂️ Categoria</label>
+      <select onchange="window._fCat=this.value;go('trans')" style="font-size:.78rem;padding:6px 9px">
+        <option value="">Todas</option>${catOpts}
+      </select>
+    </div>
+    <div class="cfi">
+      <label>💳 Forma de Pagamento</label>
+      <select onchange="window._fTipo=this.value;go('trans')" style="font-size:.78rem;padding:6px 9px">
+        <option value="">Todas</option>${getTipos().map(t=>`<option value="${t}" ${fTipo===t?'selected':''}>${t}</option>`).join('')}
+      </select>
+    </div>
+    <div class="cfi">
+      <label>📅 De</label>
+      <input type="date" value="${fDe}" onchange="window._fDe=this.value;go('trans')" style="font-size:.78rem;padding:6px 9px"/>
+    </div>
+    <div class="cfi">
+      <label>📅 Até</label>
+      <input type="date" value="${fAte}" onchange="window._fAte=this.value;go('trans')" style="font-size:.78rem;padding:6px 9px"/>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;align-self:flex-end;padding-bottom:2px">
+      <span style="color:var(--red);font-family:var(--mo);font-size:.78rem">↓ ${fmt(totalSaidas)}</span>
+      <span style="color:var(--bd2)">|</span>
+      <span style="color:var(--green);font-family:var(--mo);font-size:.78rem">↑ ${fmt(totalEntradas)}</span>
+    </div>
   </div>
 </div>
+
 <!-- TOTAIS POR FORMA -->
-${Object.keys(porTipo).length?`<div style="background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:12px 18px;margin-bottom:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center">
-  <span style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3)">💳 Por forma de pagamento:</span>
+${Object.keys(porTipo).length?`<div style="background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:10px 18px;margin-bottom:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+  <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3)">💳 Por pagamento:</span>
   ${Object.entries(porTipo).sort((a,b)=>b[1]-a[1]).map(([tipo,total])=>{
     const card=getCards().find(c=>c.nome===tipo);
     const cor=card?card.cor:tipo==='Débito'?'var(--blue)':tipo==='PIX'?'var(--green)':tipo==='Dinheiro'?'var(--yellow)':'var(--purple)';
-    return`<div style="display:flex;align-items:center;gap:6px;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);padding:5px 12px">
-      <span style="width:7px;height:7px;border-radius:50%;background:${cor};flex-shrink:0"></span>
-      <span style="font-size:.75rem;font-weight:600;color:var(--tx2)">${tipo}</span>
-      <span style="font-family:var(--mono,var(--mo));font-size:.78rem;font-weight:700;color:var(--red)">- ${fmt(total)}</span>
+    return`<div style="display:flex;align-items:center;gap:5px;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);padding:4px 10px">
+      <span style="width:6px;height:6px;border-radius:50%;background:${cor}"></span>
+      <span style="font-size:.73rem;font-weight:600;color:var(--tx2)">${tipo}</span>
+      <span style="font-family:var(--mo);font-size:.75rem;font-weight:700;color:var(--red)">- ${fmt(total)}</span>
     </div>`;
   }).join('')}
 </div>`:''}
 
+<!-- SELECIONADOS -->
+${selRows.length?`<div style="background:linear-gradient(135deg,rgba(91,141,238,.1),rgba(179,136,255,.07));border:1px solid rgba(91,141,238,.25);border-radius:var(--r);padding:12px 18px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+  <div style="display:flex;align-items:center;gap:10px">
+    <span style="font-size:.78rem;font-weight:600;color:var(--blue)">${selRows.length} item(s) selecionado(s)</span>
+    <button class="btn btn-g btn-sm" onclick="window._selTrans=new Set();go('trans')">✕ Desmarcar todos</button>
+  </div>
+  <div style="font-family:var(--mo);font-size:1rem;font-weight:700;color:var(--red)">Soma: - ${fmt(selTotal)}</div>
+</div>`:''}
+
 <div class="sec">
-  <div class="sec-h"><div class="sec-t">💸 Todos os Lançamentos</div><span style="font-size:.75rem;color:var(--tx3)">${allRows.length} item(s)</span></div>
+  <div class="sec-h">
+    <div class="sec-t">💸 Todos os Lançamentos</div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.75rem;font-weight:500;color:var(--tx2);text-transform:none;letter-spacing:0">
+        <input type="checkbox" ${allSel?'checked':''} onchange="transToggleAll(${JSON.stringify(allIds)},this.checked)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--blue)"/>
+        Selecionar todos
+      </label>
+      <span style="font-size:.75rem;color:var(--tx3)">${allRows.length} item(s)</span>
+    </div>
+  </div>
   <div class="tw ts">
-  ${allRows.length?`<table><thead><tr><th>Nome</th><th>Categoria</th><th>Forma</th><th>Data</th><th style="text-align:right">Valor</th><th></th></tr></thead>
-  <tbody>${allRows.map((x,i)=>`<tr>
-    <td class="nm">${x.nome||'—'}</td>
-    <td>${x.categoria?`<span class="badge bb" style="font-size:.62rem">${x.categoria}</span>`:`<button class="btn btn-g btn-sm" onclick="editCatTrans(${x._idx})" style="font-size:.65rem;color:var(--yellow);padding:2px 7px">+ Categoria</button>`}</td>
-    <td>${x.tipo?tbadge(x.tipo):'—'}</td>
-    <td style="color:var(--tx3);font-size:.73rem">${x.data||'—'}</td>
-    <td class="am" style="color:${x._tipo==='entrada'?'var(--green)':'var(--red)'};font-family:var(--mo)">${x._tipo==='entrada'?'+':'-'} ${fmt(x.valor)}</td>
-    <td>${x._tipo==='saida'?`<button class="btn-ic" onclick="rmTrans(${x._idx})">🗑</button><button class="btn-ic" onclick="editCatTrans(${x._idx})" title="Alterar categoria">🏷️</button>`:''}</td>
-  </tr>`).join('')}</tbody></table>`
+  ${allRows.length?`<table><thead><tr><th style="width:32px"></th><th>Nome</th><th>Categoria</th><th>Forma</th><th>Data</th><th style="text-align:right">Valor</th><th></th></tr></thead>
+  <tbody>${allRows.map((x,ri)=>{
+    const rowId=x.id||x._order+'';
+    const isSel=sel.has(rowId);
+    return`<tr style="${isSel?'background:rgba(91,141,238,.07);':''}">
+      <td style="text-align:center;padding:6px 8px">
+        <input type="checkbox" ${isSel?'checked':''} onchange="transToggleSel('${rowId}',this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:var(--blue)"/>
+      </td>
+      <td class="nm">${x.nome||'—'}</td>
+      <td>${x.categoria?`<span class="badge bb" style="font-size:.62rem">${x.categoria}</span>`:`<button class="btn btn-g btn-sm" onclick="editCatTrans(${x._idx})" style="font-size:.65rem;color:var(--yellow);padding:2px 7px">+ Cat.</button>`}</td>
+      <td>${x.tipo?tbadge(x.tipo):'—'}</td>
+      <td style="color:var(--tx3);font-size:.73rem">${x.data||'—'}</td>
+      <td class="am" style="color:${x._tipo==='entrada'?'var(--green)':'var(--red)'};font-family:var(--mo)">${x._tipo==='entrada'?'+':'-'} ${fmt(x.valor)}</td>
+      <td>${x._tipo==='saida'?`<button class="btn-ic" onclick="rmTrans(${x._idx})">🗑</button><button class="btn-ic" onclick="editCatTrans(${x._idx})" title="Alterar categoria">🏷️</button>`:''}</td>
+    </tr>`;
+  }).join('')}</tbody></table>`
   :'<div class="empty"><div class="empty-icon">🛒</div><div class="empty-txt">Nenhuma transação encontrada.</div></div>'}
   </div>
 </div>`;
+}
+
+function transToggleSel(id,checked){
+  if(!window._selTrans)window._selTrans=new Set();
+  if(checked)window._selTrans.add(id);else window._selTrans.delete(id);
+  go('trans');
+}
+function transToggleAll(ids,checked){
+  if(!window._selTrans)window._selTrans=new Set();
+  if(checked)ids.forEach(id=>window._selTrans.add(id));
+  else ids.forEach(id=>window._selTrans.delete(id));
+  go('trans');
 }
 
 function openTrans(idx=null){
