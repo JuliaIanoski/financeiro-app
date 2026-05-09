@@ -441,25 +441,12 @@ function go(page){
 // ══════════════ CALCULATIONS ══════════════════════
 function calcTotals(m){
   const d=gm(m);
-  // entradas: manual + contas a receber pagas
-  const entManual=sum(d.entradas,'valor');
-  const entReceber=d.receber.filter(r=>r.status==='pago').reduce((s,r)=>{
-    if(r.parcelas&&r.parcelas>1){
-      return s+r.parc.filter(p=>p.status==='pago'&&mk2(p.venc)===mk(m)).reduce((a,p)=>a+(+p.valor||0),0);
-    }
-    return s+(mk2(r.venc)===mk(m)?(+r.valor||0):0);
-  },0);
-  const tE=entManual+entReceber;
-
-  // saídas: transações + contas a pagar pagas
-  const tTrans=sum(d.trans,'valor');
-  const tPagar=d.pagar.filter(p=>p.status==='pago').reduce((s,p)=>{
-    if(p.parcelas&&p.parcelas>1){
-      return s+p.parc.filter(pc=>pc.status==='pago'&&mk2(pc.venc)===mk(m)).reduce((a,pc)=>a+(+pc.valor||0),0);
-    }
-    return s+(mk2(p.venc)===mk(m)?(+p.valor||0):0);
-  },0);
-  const tS=tTrans+tPagar;
+  // Entradas: tudo que está em d.entradas (manual + auto-lançamentos de receber pago)
+  // NÃO somar d.receber separado — já foi lançado em d.entradas ao marcar como pago
+  const tE=sum(d.entradas,'valor');
+  // Saídas: tudo que está em d.trans (manual + auto-lançamentos de pagar pago)
+  // NÃO somar d.pagar separado — já foi lançado em d.trans ao marcar como pago
+  const tS=sum(d.trans,'valor');
   return{tE,tS,saldo:tE-tS};
 }
 function mk2(dateStr){if(!dateStr)return'';return dateStr.slice(0,7);}
@@ -668,7 +655,19 @@ function pTrans(){
 
   const d=gm();
   let allSaidas=d.trans.map((t,i)=>({...t,_tipo:'saida',_idx:i,_order:i}));
-  let allEntradas=d.entradas.map((e,i)=>({...e,_tipo:'entrada',valor:e.valor,_order:d.trans.length+i}));
+  // Scan ALL months for entradas that belong to current month
+  // (auto-launched payments may have been stored in a different month key)
+  let allEntradasRaw=[];
+  Object.entries(S.data).forEach(([mk,md])=>{
+    (md.entradas||[]).forEach((e,i)=>{
+      const eMes=e.data?e.data.slice(0,7):mk;
+      if(eMes===S.month) allEntradasRaw.push(e);
+    });
+  });
+  // deduplicate by id
+  const seenE=new Set();
+  allEntradasRaw=allEntradasRaw.filter(e=>{const k=e.id||e.nome+e.valor+e.data;if(seenE.has(k))return false;seenE.add(k);return true;});
+  let allEntradas=allEntradasRaw.map((e,i)=>({...e,_tipo:'entrada',valor:e.valor,_order:d.trans.length+i}));
   let allRows=[...allSaidas,...allEntradas].reverse();
 
   // Aplicar filtros
@@ -1622,6 +1621,7 @@ ${macros.map((mac,mi)=>`
           ${o>0?`<div style="font-size:.7rem;font-family:var(--mo);color:${bc};margin-bottom:2px">${pct.toFixed(0)}%</div><div class="pb"><div class="pf" style="width:${pct}%;background:${bc}"></div></div>`:'—'}
         </td>
         <td><div style="display:flex;gap:4px;justify-content:center">
+          <button class="btn btn-g btn-sm" title="Ver lançamentos" onclick="verLancCat('${esc}')">📋</button>
           <button class="btn-ic" title="Renomear" onclick="openRenameCat('${esc}')">✏️</button>
           <button class="btn-ic" title="Mover para outro grupo" onclick="openMoveCat('${esc}','${macEsc}')">↕️</button>
           <button class="btn-ic" title="Excluir" onclick="delCat('${esc}','${macEsc}')">🗑</button>
@@ -1630,6 +1630,64 @@ ${macros.map((mac,mi)=>`
     }).join('')}</tbody>
   </table></div>
 </div>`).join('')}`;
+}
+
+// ── Ver lançamentos de uma categoria ───────────────
+function verLancCat(cat){
+  const d=gm();
+  const trans=d.trans.map((t,i)=>({...t,_idx:i})).filter(t=>t.categoria===cat);
+  const ents=(d.entradas||[]).filter(e=>e.categoria===cat);
+  const catOpts=getAllCats().map(c=>`<option value="${c}" >${c}</option>`).join('');
+  const total=trans.reduce((s,t)=>s+(+t.valor||0),0);
+  const totalEnt=ents.reduce((s,e)=>s+(+e.valor||0),0);
+  openMd(`🗂️ Lançamentos — ${cat}`,`
+    <div style="margin-bottom:12px;display:flex;gap:12px;flex-wrap:wrap">
+      ${trans.length?`<span style="font-size:.78rem;color:var(--red)">💸 Saídas: <strong style="font-family:var(--mo)">${fmt(total)}</strong> (${trans.length})</span>`:''}
+      ${ents.length?`<span style="font-size:.78rem;color:var(--green)">💵 Entradas: <strong style="font-family:var(--mo)">${fmt(totalEnt)}</strong> (${ents.length})</span>`:''}
+      ${!trans.length&&!ents.length?`<span style="color:var(--tx3);font-size:.78rem">Nenhum lançamento nesta categoria em ${mname(S.month)}.</span>`:''}
+    </div>
+    ${trans.length?`<div style="font-size:.72rem;font-weight:700;color:var(--tx3);text-transform:uppercase;margin-bottom:6px">Saídas</div>
+    <table style="width:100%;border-collapse:collapse;font-size:.8rem;margin-bottom:14px">
+      <thead><tr>
+        <th style="padding:6px 10px;text-align:left;color:var(--tx3);border-bottom:1px solid var(--bd);font-size:.65rem;text-transform:uppercase">Nome</th>
+        <th style="padding:6px 10px;color:var(--tx3);border-bottom:1px solid var(--bd);font-size:.65rem;text-transform:uppercase">Data</th>
+        <th style="padding:6px 10px;text-align:right;color:var(--tx3);border-bottom:1px solid var(--bd);font-size:.65rem;text-transform:uppercase">Valor</th>
+        <th style="padding:6px 10px;color:var(--tx3);border-bottom:1px solid var(--bd);font-size:.65rem;text-transform:uppercase">Mudar cat.</th>
+      </tr></thead>
+      <tbody>${trans.map(t=>`<tr style="border-bottom:1px solid rgba(42,48,80,.3)">
+        <td style="padding:7px 10px;font-weight:500">${t.nome||'—'}</td>
+        <td style="padding:7px 10px;color:var(--tx3);font-size:.73rem">${t.data||'—'}</td>
+        <td style="padding:7px 10px;text-align:right;font-family:var(--mo);color:var(--red)">- ${fmt(t.valor)}</td>
+        <td style="padding:7px 10px">
+          <select onchange="changeCatTrans(${t._idx},this.value)" style="font-size:.72rem;padding:2px 6px;background:var(--sf3);border:1px solid var(--bd);border-radius:5px;color:var(--tx)">
+            <option value="${cat}" selected>${cat}</option>
+            ${catOpts}
+          </select>
+        </td>
+      </tr>`).join('')}</tbody>
+    </table>`:''}
+    ${ents.length?`<div style="font-size:.72rem;font-weight:700;color:var(--tx3);text-transform:uppercase;margin-bottom:6px">Entradas</div>
+    <table style="width:100%;border-collapse:collapse;font-size:.8rem">
+      <thead><tr>
+        <th style="padding:6px 10px;text-align:left;color:var(--tx3);border-bottom:1px solid var(--bd);font-size:.65rem;text-transform:uppercase">Nome</th>
+        <th style="padding:6px 10px;color:var(--tx3);border-bottom:1px solid var(--bd);font-size:.65rem;text-transform:uppercase">Data</th>
+        <th style="padding:6px 10px;text-align:right;color:var(--tx3);border-bottom:1px solid var(--bd);font-size:.65rem;text-transform:uppercase">Valor</th>
+      </tr></thead>
+      <tbody>${ents.map(e=>`<tr style="border-bottom:1px solid rgba(42,48,80,.3)">
+        <td style="padding:7px 10px;font-weight:500">${e.nome||'—'}</td>
+        <td style="padding:7px 10px;color:var(--tx3);font-size:.73rem">${e.data||'—'}</td>
+        <td style="padding:7px 10px;text-align:right;font-family:var(--mo);color:var(--green)">+ ${fmt(e.valor)}</td>
+      </tr>`).join('')}</tbody>
+    </table>`:''}
+  `,null,true);
+}
+
+function changeCatTrans(idx, novaCat){
+  const t=gm().trans[idx];
+  if(!t)return;
+  t.categoria=novaCat;
+  save();toast(`Categoria alterada para "${novaCat}"!`);
+  closeM();go('cats');
 }
 
 // ── ORÇAMENTO MICRO com validação ──────────────────
